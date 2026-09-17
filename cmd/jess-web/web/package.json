@@ -1,0 +1,37 @@
+{
+  "name": "jess-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "jess-web SPA. React + TypeScript + xterm.js, bundled via Vite and embedded into the Go binary via go:embed (Teleport pattern).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build && node -e \"require('fs').writeFileSync('dist/.gitkeep','')\"",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "lint": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@carbon/icons-react": "11.82.0",
+    "@carbon/react": "1.110.0",
+    "@carbon/styles": "1.109.0",
+    "@ibm/plex": "6.4.1",
+    "@xterm/addon-fit": "0.10.0",
+    "@xterm/xterm": "5.5.0",
+    "asciinema-player": "3.10.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-is": "18.3.1",
+    "react-router-dom": "6.27.0"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@types/react-is": "^19.2.0",
+    "@vitejs/plugin-react": "4.3.4",
+    "sass": "1.101.0",
+    "typescript": "5.6.3",
+    "vite": "5.4.11"
+  },
+  "packageManager": "pnpm@9.15.9"
+}

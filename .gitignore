@@ -1,0 +1,36 @@
+# Go
+/bin/
+# Stray `go build` outputs dropped at the repo root (real sources live under
+# cmd/*; the container build emits these four into /out). Root-anchored so they
+# never match the cmd/jess-web source dir.
+/jess-controller
+/jess-worker
+/jessctl
+/jess-web
+*.test
+*.out
+coverage.*
+
+# Rust (jess-web RDP render, future)
+rust/**/target/
+**/*.rs.bk
+
+# Local env / secrets — never commit
+*.local
+*.local.*
+.env
+*.pem
+*.key
+
+# Editor / OS
+.DS_Store
+*.swp
+
+# jess-web SPA build artefacts. The .gitkeep under web/dist/ pins the
+# directory so go:embed works on a fresh clone before CI runs pnpm build.
+cmd/jess-web/web/node_modules/
+cmd/jess-web/web/dist/*
+!cmd/jess-web/web/dist/.gitkeep
+cmd/jess-web/web/*.tsbuildinfo
+cmd/jess-web/web/.vite/
+/jess-web

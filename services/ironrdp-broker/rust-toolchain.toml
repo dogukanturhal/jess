@@ -1,0 +1,10 @@
+# Pin the toolchain so `cargo build` in a fresh checkout doesn't pick
+# up whatever's on PATH. Must stay in lockstep with the Dockerfile's
+# rust:<version>-slim base — currently 1.89 (the highest MSRV among
+# transitive deps after the 2026-06-02 ironrdp 0.15 / sspi 0.21 bump).
+# Both ironrdp 0.15 + sspi 0.21 declare rust-version 1.89; older
+# transitives stay compatible.
+[toolchain]
+channel = "1.89.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

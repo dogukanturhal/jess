@@ -1,0 +1,193 @@
+---
+# JessTarget — Phase 7e GitOps-native catalog entry.
+#
+# Declares ONE brokered target as a Kubernetes CR. Reconciled by the
+# jess-controller's JessTarget watch provider into the in-memory
+# catalog. Replaces the static JSON ConfigMap for K8s-tracked fleet
+# members — customers running Terraform / Cluster-API / cluster-
+# autoscaler can directly write JessTarget CRs alongside the
+# infrastructure resources they describe, no ConfigMap MR needed.
+#
+# Scope: cluster-scoped. Mirrors the current ConfigMap (no namespace
+# carve-up) so cross-namespace references aren't a concern. Phase 8+
+# may introduce namespaced targets for multi-tenant deployments.
+#
+# Spec fields mirror internal/catalog.Target — when extending one,
+# extend the other in lockstep (CI grep guard recommended).
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: jesstargets.jess.hexxlock.com
+spec:
+  group: jess.hexxlock.com
+  scope: Cluster
+  names:
+    plural: jesstargets
+    singular: jesstarget
+    kind: JessTarget
+    shortNames:
+      - jt
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [protocol, address]
+              properties:
+                # Display name shown in jess-web SPA + jessctl output.
+                # Empty = falls back to metadata.name.
+                name:
+                  type: string
+                # Wire protocol the worker uses to dial the target.
+                protocol:
+                  type: string
+                  enum: [tcp, ssh, postgres, mysql, rdp]
+                # host:port. Worker-side reachable; never directly
+                # accessed from the operator.
+                address:
+                  type: string
+                  pattern: '^[^:]+:[0-9]{1,5}$'
+                # Multi-region routing scope. Empty = matches any.
+                region:
+                  type: string
+                # Falcon-ID roles the PDP requires to even consider
+                # this target. Empty array = default-deny.
+                required_roles:
+                  type: array
+                  items:
+                    type: string
+                # Recording is fail-closed: when true, session-open
+                # is denied unless a recorder is configured.
+                recorded:
+                  type: boolean
+                  default: true
+                # SSH host pubkey (authorized_keys-style line).
+                # REQUIRED for SSH targets in production UNLESS
+                # host_key_ca_signed=true — the worker refuses
+                # unpinned hosts. Empty + host_key_ca_signed=false =
+                # trust-on-first-use (dev only).
+                host_key:
+                  type: string
+                # ADR 0044: when true, the worker validates the target's
+                # presented OpenSSH host certificate against its configured
+                # jess-ssh-host-ca trust anchor (signed by the Vault SSH
+                # host-cert CA). When set, `host_key` may be empty — the
+                # target is enrolled via configure-node-ssh-host-cert.sh.
+                # Default false (per-host pinning, the pre-2026-06-06
+                # behavior).
+                host_key_ca_signed:
+                  type: boolean
+                  default: false
+                # Per-target SSH login user override. Cert's valid_principal
+                # AND SSH User: header follow this. Empty = worker default
+                # (JESS_SSH_LOGIN_USER env). Vault SSH role's allowed_users
+                # must include the value (default ssh-admin role allows
+                # hexxlock,Administrator).
+                ssh_login_user:
+                  type: string
+                # Default database/schema for postgres/mysql targets.
+                # Ignored for non-DB protocols.
+                database:
+                  type: string
+                # Blast-radius classification — drives Phase 5h-4
+                # risk-scored auto-approval.
+                criticality:
+                  type: string
+                  enum: [low, medium, high, critical]
+                  default: medium
+                # Operator-meaningful labels surfaced in jess-web SPA
+                # and the risk-score evaluator. Reserved prefixes:
+                #   team:<name>       (owning team — alerts route here)
+                #   compliance:<x>    (frameworks the target is in-scope for)
+                tags:
+                  type: array
+                  items:
+                    type: string
+                # DDIL P3.8 (ADR 0062) — pre-positioned offline session
+                # credentials opt-in. ABSENT or enabled=false (default) ⇒ the
+                # target is NOT eligible: a Vault outage halts new privileged
+                # sessions to it, exactly as today (fail closed). When enabled,
+                # jess proactively pre-fetches + caches a short-TTL Vault-minted
+                # credential while online and, only if Vault becomes unreachable,
+                # may serve it within a signed, time-boxed budget (max_ttl),
+                # bounded by max_uses, then fails closed.
+                #
+                # HARD RULE: a Tier-0 target (criticality=critical — Domain
+                # Controllers / crown jewels) is NEVER eligible even if enabled
+                # here; the exclusion is enforced un-overridably in the broker
+                # (mirrors the Tier-0 RDP hard-guard, ADR 0052).
+                offline_credentials:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: false
+                    # Max offline-honour window after pre-positioning, as a Go
+                    # duration string (e.g. "4h"). Independent of the credential's
+                    # own lease TTL. Empty ⇒ broker default (4h); clamped to the
+                    # global cap JESS_OFFLINE_CREDS_MAX_TTL.
+                    max_ttl:
+                      type: string
+                      pattern: '^[0-9]+(ns|us|µs|ms|s|m|h)([0-9]+(ns|us|µs|ms|s|m|h))*$'
+                    # Max offline sessions one pre-positioned credential may back
+                    # before failing closed. 0/absent ⇒ broker default (3);
+                    # clamped to JESS_OFFLINE_CREDS_MAX_USES.
+                    max_uses:
+                      type: integer
+                      minimum: 0
+                # Phase 5h-5 device-posture wall. Every requirement
+                # AND-combined; ValuesAnyOf OR-combined within;
+                # missing claim in operator JWT fails closed.
+                require_device_claims:
+                  type: array
+                  items:
+                    type: object
+                    required: [claim, valuesAnyOf]
+                    properties:
+                      claim:
+                        type: string
+                      valuesAnyOf:
+                        type: array
+                        items:
+                          type: string
+            status:
+              type: object
+              properties:
+                # Wall-clock of the last successful reconcile.
+                lastReconciledAt:
+                  type: string
+                  format: date-time
+                # Aggregator records when this target last surfaced in
+                # a discovery snapshot. Useful for spotting CRs that
+                # exist but are filtered out for some reason.
+                lastSeenAt:
+                  type: string
+                  format: date-time
+                # Free-form reconcile note — e.g. "spec.address invalid
+                # (no port)". Empty when reconcile succeeded.
+                conditionMessage:
+                  type: string
+      additionalPrinterColumns:
+        - name: Protocol
+          type: string
+          jsonPath: .spec.protocol
+        - name: Address
+          type: string
+          jsonPath: .spec.address
+        - name: Criticality
+          type: string
+          jsonPath: .spec.criticality
+        - name: Region
+          type: string
+          jsonPath: .spec.region
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}

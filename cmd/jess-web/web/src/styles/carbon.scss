@@ -1,0 +1,255 @@
+// ============================================================================
+// jess-web — IBM Carbon Design System theme (g100 dark "command-and-control")
+//
+// Single SCSS entry imported by main.tsx (before the legacy structural CSS).
+// It:
+//   1. Pulls in the full Carbon styles bundle (@carbon/styles via @carbon/react)
+//      — all component CSS + the theme-token machinery.
+//   2. Sets the global default theme to g100 (dark) — the C2/ops aesthetic that
+//      matches the prior dark command-center theme.
+//   3. Wires IBM Plex Sans / Mono (Carbon's brand typeface) from @ibm/plex.
+//   4. BRIDGES the legacy design-token custom properties (--hxm-* and --c2-*)
+//      onto Carbon g100 theme tokens. The existing structural stylesheets
+//      (tokens.css / c2.css / app.css) and every inline `c2-*` / `jw-*` class
+//      the pages use are entirely custom-property-driven, so retargeting those
+//      variables to Carbon tokens reskins the whole app to Carbon's g100
+//      palette + Plex type + Carbon spacing WITHOUT touching page markup.
+//
+// The headline structural components (AppShell, DataGrid, StatusBadge, Button,
+// DetailTabs, Dialog, KpiTile, Panel, ConsoleFrame chrome) are additionally
+// rebuilt on real Carbon React primitives (Header/SideNav/DataTable/Tag/
+// Button/ContentSwitcher/Modal/Tile/Loading) — see src/components/c2/*.
+// ============================================================================
+
+// --- Carbon styles ---------------------------------------------------------
+// $css--font-face: false → suppress Carbon's built-in @font-face block. Carbon
+// emits faces for ALL Plex families (incl. Serif) via `~@ibm/plex/...` URLs
+// that Vite can't resolve; we self-host only the Sans + Mono weights we use
+// (declared below) so the bundle stays lean and offline-safe.
+@use '@carbon/styles' with ($css--font-face: false);
+@use '@carbon/styles/scss/theme' as *;
+@use '@carbon/styles/scss/themes' as *;
+@use '@carbon/styles/scss/spacing' as *;
+
+// --- IBM Plex fonts (Carbon brand typeface) --------------------------------
+// @font-face against the woff2 faces shipped in @ibm/plex so Vite resolves +
+// fingerprints them at build (no CDN; works behind the Go go:embed). Weights
+// match Carbon's type scale: Sans Light/Regular/SemiBold, Mono Regular/Medium.
+@font-face {
+  font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 300; font-display: swap;
+  src: local('IBM Plex Sans Light'),
+    url('@ibm/plex/IBM-Plex-Sans/fonts/complete/woff2/IBMPlexSans-Light.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 400; font-display: swap;
+  src: local('IBM Plex Sans'),
+    url('@ibm/plex/IBM-Plex-Sans/fonts/complete/woff2/IBMPlexSans-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 600; font-display: swap;
+  src: local('IBM Plex Sans SemiBold'),
+    url('@ibm/plex/IBM-Plex-Sans/fonts/complete/woff2/IBMPlexSans-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: local('IBM Plex Mono'),
+    url('@ibm/plex/IBM-Plex-Mono/fonts/complete/woff2/IBMPlexMono-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap;
+  src: local('IBM Plex Mono Medium'),
+    url('@ibm/plex/IBM-Plex-Mono/fonts/complete/woff2/IBMPlexMono-Medium.woff2') format('woff2');
+}
+
+// ============================================================================
+// Theme + token bridge
+// ============================================================================
+
+// Default the whole document to g100 (dark). `theme($g100)` emits the g100
+// CSS custom properties (--cds-*) which every Carbon component + the bridge
+// below resolve. The legacy structural CSS keys off the bridged --hxm/--c2
+// variables, so g100 flows through to all of it.
+:root {
+  @include theme($g100);
+
+  // ---- Surfaces (legacy --hxm names → Carbon g100 layer tokens) ----------
+  --hxm-bg:        #{$background};
+  --hxm-bg-soft:   #{$background};
+  --hxm-s1:        #{$layer-01};
+  --hxm-s2:        #{$layer-02};
+  --hxm-s3:        #{$layer-03};
+  --hxm-line:      #{$border-subtle-01};
+  --hxm-line-h:    #{$border-strong-01};
+
+  // ---- Ink ramp (text tokens) -------------------------------------------
+  --hxm-ink-0:     #{$text-primary};
+  --hxm-ink-1:     #{$text-primary};
+  --hxm-ink-2:     #{$text-secondary};
+  --hxm-ink-3:     #{$text-helper};
+  --hxm-ink-4:     #{$text-disabled};
+  --hxm-hero-bg:   #{$background};
+  --hxm-hero-ink:  #{$text-primary};
+
+  // ---- C2 chrome surfaces ------------------------------------------------
+  --c2-masthead:       #{$layer-01};
+  --c2-rail:           #{$background};
+  --c2-rail-active-bg: #{$layer-selected-01};
+  --c2-grid-head:      #{$layer-accent-01};
+  --c2-grid-zebra:     #{$layer-01};
+  --c2-grid-hover:     #{$layer-hover-01};
+  --c2-overlay:        rgba(0, 0, 0, 0.66);
+
+  // ---- Live console (xterm) surface — theme-aware ------------------------
+  // The SSH terminal stage + xterm canvas read these. g100 (dark): the prior
+  // near-black command backing. g10 (light, below): a Carbon-white console so
+  // the terminal is legible in light mode rather than a dark box in a white
+  // shell. Session.tsx reads these custom properties at runtime and re-applies
+  // the xterm theme when the theme attr flips, so JS + CSS never drift.
+  --c2-terminal-bg:     #070b12;
+  --c2-terminal-fg:     #e4e7ee;
+  --c2-terminal-cursor: #22d3ee; // C2 cyan accent — matches the prior xterm cursor
+  --c2-terminal-sel:    rgba(34, 211, 238, 0.28);
+  // The letterbox CHROME around the live/replay RDP desktop (NOT the desktop
+  // pixels themselves — the canvas backing stays #000, it's a remote desktop).
+  --c2-desktop-mat:     #000;
+
+  // ---- Accent → Carbon interactive (Blue 60 in g100) ---------------------
+  --c2-accent:     #{$interactive};
+  --c2-accent-hi:  var(--cds-button-primary-hover);
+  --c2-accent-dim: #{$border-interactive};
+  --c2-accent-lo:  #{$layer-selected-01};
+  --c2-accent-md:  #{$layer-selected-hover-01};
+  --c2-accent-ink: #{$text-on-color};
+
+  // ---- Status palette → Carbon support tokens ----------------------------
+  --c2-online:     #{$support-success};
+  --c2-warn:       #{$support-warning};
+  --c2-danger:     #{$support-error};
+  --c2-mute:       #{$icon-disabled};
+  --c2-info:       #{$support-info};
+
+  // ---- Legacy blue/status aliases (un-migrated references) ----------------
+  --hxm-blue:      #{$interactive};
+  --hxm-blue-hi:   var(--cds-button-primary-hover);
+  --hxm-blue-lo:   #{$layer-selected-01};
+  --hxm-blue-ink:  #{$text-on-color};
+  --hxm-ok:        #{$support-success};
+  --hxm-warn:      #{$support-warning};
+  --hxm-danger:    #{$support-error};
+  --hxm-violet:    #8a3ffc;
+  --hxm-coral:     #{$support-error};
+  --hxm-mint:      #{$support-success};
+  --hxm-amber:     #{$support-warning};
+
+  // ---- Type → IBM Plex ---------------------------------------------------
+  --hxm-f-sans:    'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --hxm-f-serif:   'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --hxm-f-mono:    'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+  // ---- Radii → Carbon (sharp, 0–4px; Carbon is square-ish) ---------------
+  --hxm-r-sm: 0;
+  --hxm-r-md: 0;
+  --hxm-r-lg: 0;
+  --hxm-r-xl: 0;
+  --hxm-r-pill: 0;
+
+  // ---- Elevation / shadows ----------------------------------------------
+  --hxm-sh-1: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --hxm-sh-2: 0 2px 6px rgba(0, 0, 0, 0.40);
+  --hxm-sh-3: 0 4px 16px rgba(0, 0, 0, 0.55);
+  --hxm-sh-blue: 0 0 0 1px #{$border-interactive};
+
+  // ---- Layout metrics (unchanged geometry) -------------------------------
+  --c2-masthead-h: 3rem;        // Carbon UI Shell header height (48px)
+  --c2-rail-w: 16rem;           // Carbon SideNav expanded width (256px)
+  --c2-rail-w-collapsed: 3rem;  // Carbon SideNav rail width (48px)
+
+  --hxm-ease: cubic-bezier(0.2, 0, 0, 1);
+  --hxm-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+// --- Light theme (secondary, via ThemeToggle's data-attr) ------------------
+// The masthead/theme switch flips data-carbon-theme / data-theme. When set to
+// g10, re-include the white-ish theme so Carbon components + the bridge follow.
+:root[data-theme='light'],
+:root[data-carbon-theme='g10'] {
+  @include theme($g10);
+
+  --hxm-bg:        #{$background};
+  --hxm-bg-soft:   #{$background};
+  --hxm-s1:        #{$layer-01};
+  --hxm-s2:        #{$layer-02};
+  --hxm-s3:        #{$layer-03};
+  --hxm-line:      #{$border-subtle-01};
+  --hxm-line-h:    #{$border-strong-01};
+  --hxm-ink-0:     #{$text-primary};
+  --hxm-ink-1:     #{$text-primary};
+  --hxm-ink-2:     #{$text-secondary};
+  --hxm-ink-3:     #{$text-helper};
+  --hxm-ink-4:     #{$text-disabled};
+  --c2-masthead:       #161616; // keep masthead dark in light mode (C2 habit)
+  --c2-rail:           #{$background};
+  --c2-rail-active-bg: #{$layer-selected-01};
+  --c2-grid-head:      #{$layer-accent-01};
+  --c2-grid-zebra:     #{$layer-01};
+  --c2-grid-hover:     #{$layer-hover-01};
+  --c2-overlay:        rgba(0, 0, 0, 0.45);
+  --c2-accent-lo:  #{$layer-selected-01};
+  --c2-accent-md:  #{$layer-selected-hover-01};
+
+  // ---- Live console (xterm) surface — light palette ----------------------
+  // Carbon g10 surfaces so the SSH terminal reads as a light console (dark
+  // glyphs on white) instead of a dark box in the white shell. xterm picks
+  // these up via getComputedStyle in Session.tsx.
+  --c2-terminal-bg:     #{$background};
+  --c2-terminal-fg:     #{$text-primary};
+  --c2-terminal-cursor: #{$interactive};
+  --c2-terminal-sel:    #{$layer-selected-01};
+  // Letterbox chrome around the remote desktop, tuned for light mode. The
+  // canvas backing stays #000 (it's a Windows desktop), but the surrounding
+  // mat is a soft Carbon surface, not a black void.
+  --c2-desktop-mat:     #{$layer-02};
+}
+
+// ============================================================================
+// Global base + console layer
+// ============================================================================
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+body {
+  background: $background;
+  color: $text-primary;
+  font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+#root { min-height: 100%; }
+
+code, .jw-mono, .c2-mono {
+  font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+}
+
+// Scrollbars tuned for the dark command surface.
+* { scrollbar-width: thin; scrollbar-color: $border-strong-01 transparent; }
+*::-webkit-scrollbar { width: 0.625rem; height: 0.625rem; }
+*::-webkit-scrollbar-thumb {
+  background: $border-strong-01;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+// Carbon's UI Shell <Header> is fixed at the top. The c2 console shell uses a
+// CSS-grid masthead area; the Carbon Header coexists by reserving the same
+// 3rem top band. Keep the live console backings near-black regardless of theme
+// (these are explicit overrides in c2.css via --c2-terminal-bg, set above).
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,179 @@
+# proxy-core — RDP framing + grant-lookup primitives. Library crate so
+# integration tests can exercise the framing without spinning a full
+# Axum server; future jessctl `rdp-probe` subcommand will link this
+# crate directly.
+[package]
+name = "jess-ironrdp-proxy-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+# anyhow used by grant.rs::Client::new() signature (returns
+# anyhow::Result<Self>) — declared at the workspace root but proxy-
+# core wasn't pulling it directly, so the Dockerfile's two-stage
+# build (cache-prime with dummy src + real-source rebuild via
+# `touch`) only surfaced the missing dep on the real-source pass.
+# broker-bin has always declared anyhow at this same line; mirroring
+# here. Surfaced 2026-06-05 in pipeline 9205 once the sspi/picky
+# skew (the original blocker that was failing earlier in pass #16)
+# was fixed by the ironrdp 0.15 family bump.
+anyhow = { workspace = true }
+reqwest = { workspace = true }
+time = { workspace = true }
+
+ironrdp = { workspace = true }
+ironrdp-pdu = { workspace = true }
+ironrdp-connector = { workspace = true }
+ironrdp-svc = { workspace = true }
+# ironrdp-core supplies `WriteBuf` (the connector `Sequence::step` output
+# buffer). Already in the locked dep graph as a transitive of
+# ironrdp-connector (=0.2.0); declared here ONLY under the `ironrdp_spike`
+# feature so the default build's surface is unchanged (ADR 0033 — the
+# default broker still does NOT `use` any ironrdp connector type). The
+# pin tracks ironrdp-connector 0.9's `ironrdp-core = "0.2"` requirement.
+ironrdp-core = { version = "=0.2.0", optional = true }
+
+# Live-CredSSP handshake deps (feature `ironrdp_live`). All optional —
+# absent from the default build's surface. See connect.rs for usage.
+ironrdp-async = { workspace = true, optional = true }
+ironrdp-tokio = { workspace = true, optional = true }
+ironrdp-session = { workspace = true, optional = true }
+# NOTE: we reach the SSPI CredSSP engine + `NetworkRequest` type via the
+# `ironrdp_connector::sspi` re-export, so no DIRECT sspi dep is needed.
+# But ironrdp-connector pulls sspi with default features; we force its
+# crypto provider to aws-lc-rs (matching tokio-rustls) by depending on
+# sspi here purely to set features (no symbols used directly).
+sspi = { workspace = true, optional = true }
+tokio-rustls = { workspace = true, optional = true }
+x509-cert = { workspace = true, optional = true }
+zeroize = { workspace = true, optional = true }
+# Only the credssp_live bin needs a subscriber + env-filter to emit the
+# state-transition log; gated under ironrdp_live so the default build's
+# surface is unchanged.
+tracing-subscriber = { workspace = true, optional = true }
+# PNG encoder for the P2a desktop-decode path + the WORM recording path
+# (feature `ironrdp_live`). Optional — absent from the default build's
+# surface. See active.rs `encode_png`. PNG stays the LOSSLESS encoder used
+# for the recorded stream (the Go tee inlines it into jess-rdp-recording-v2).
+png = { workspace = true, optional = true }
+# Tier-1 perf: LOSSY WebP encoder for the LIVE dirty-rect stream (feature
+# `ironrdp_live`). Workspace pin sets `default-features = false` to drop the
+# crate's pull of the whole `image` crate — we only use the raw
+# `Encoder::from_rgba(..).encode(q)` path, which compiles against `libwebp-sys`
+# (vendored libwebp via `cc`) only. Lossy WebP at q~80 is markedly smaller on
+# the wire than the lossless region PNG and decodes off the main thread via
+# createImageBitmap. PNG is retained for the lossless mode + the WORM recording
+# path (which must stay lossless). See active.rs/stream.rs `encode_*_webp`.
+webp = { workspace = true, optional = true }
+# SOFTWARE H.264 encoder (ADR 0061) — the GPU-free native-feel live path.
+# Optional; pulled only under `ironrdp_live`. See `src/h264enc.rs`.
+openh264 = { workspace = true, optional = true }
+# `bytes::BytesMut` is the payload type `Framed::read_pdu` returns; named
+# in the P2b stream loop's `read_pdu_timeout` helper signature. Already in
+# the locked graph as an ironrdp/tokio transitive (=1.11.1); declared here
+# ONLY under `ironrdp_live` so the default build's surface is unchanged.
+bytes = { version = "=1.11.1", optional = true }
+# CLIPBOARD virtual channel (MS-RDPECLIP / cliprdr) — Tier-3 virtual-channel
+# work (ADR 0054). The CLIPRDR static-virtual-channel SVC processor +
+# `CliprdrBackend` trait + clipboard PDU codec (CF_UNICODETEXT helpers). The
+# `ironrdp` meta-crate (=0.15.0) exposes it behind its `cliprdr` feature →
+# `ironrdp-cliprdr = "0.6"`; we reach the types via the `ironrdp::cliprdr`
+# re-export (matching how `connect.rs`/`stream.rs` reach connector/session),
+# so no direct path dep is added here beyond enabling that feature. The crate
+# is pulled by `dep:ironrdp-cliprdr` purely so Cargo's resolver pins the exact
+# 0.6.0 (the version the 0.15 meta-crate caret-requires) — same exact-pin
+# discipline as the rest of this stack. OPTIONAL — absent from the default
+# build's surface; only compiled under `ironrdp_live`.
+ironrdp-cliprdr = { version = "=0.6.0", optional = true }
+
+# MS-RDPEGFX (graphics pipeline) DVC support — Tier-2 H.264/AVC420 in-tree
+# handler (ADR 0053, `src/egfx.rs`). The `ironrdp` meta-crate exposes the DVC
+# framework (`DvcProcessor`/`DrdynvcClient`/`DvcEncode`) behind its `dvc`
+# feature → `ironrdp-dvc = "0.6"`; we reach the types via the `ironrdp::dvc`
+# re-export. The matching ZGFX bulk decompressor comes from `ironrdp/graphics`
+# (already enabled). `dep:ironrdp-dvc` pins the exact 0.6.0 the 0.15 meta-crate
+# caret-requires (same exact-pin discipline as cliprdr). OPTIONAL — only built
+# under `ironrdp_live`.
+ironrdp-dvc = { version = "=0.6.0", optional = true }
+
+[features]
+# First IronRDP spike (ADR 0051). OFF by default — keeps the default
+# `cargo build` byte-for-byte the Phase 5f-8a handshake-only broker.
+# When enabled, compiles `src/spike.rs`, which drives a real
+# `ironrdp_connector::ClientConnector` through the X.224 / connection-
+# initiation step (non-NLA). See spike.rs for the MCS/CredSSP/fastpath
+# boundary markers.
+ironrdp_spike = ["dep:ironrdp-core"]
+
+# LIVE CredSSP/NLA handshake (ADR 0051, feat/rdp-credssp-live). OFF by
+# default. Compiles `src/connect.rs` (the reusable async transport driver
+# `connect_to_connected` + rustls danger verifier + TLS-pubkey lift) and
+# the `bin/credssp_live.rs` runner + the `#[ignore]` live integration
+# test. Builds on `ironrdp_spike` (reuses its Config builder + ironrdp-
+# core). Drives the connector all the way to `Connected` against a real
+# AD DC, so it pulls the async transport + TLS + SSPI + session stack.
+#
+# P2a (feat/rdp-p2-decode) extends this same feature: it also compiles
+# `src/active.rs` (the `ActiveStage` desktop-decode loop) + the
+# `bin/frames_live.rs` runner, pulling `ironrdp/graphics`
+# (`PixelFormat`) and the `png` encoder. Still OFF by default.
+ironrdp_live = [
+    "ironrdp_spike",
+    "dep:ironrdp-async",
+    "dep:ironrdp-tokio",
+    "dep:ironrdp-session",
+    "dep:sspi",
+    "dep:tokio-rustls",
+    "dep:x509-cert",
+    "dep:zeroize",
+    "dep:tracing-subscriber",
+    "dep:png",
+    "dep:webp",
+    "dep:openh264",
+    "dep:bytes",
+    "dep:ironrdp-cliprdr",
+    "dep:ironrdp-dvc",
+    "ironrdp/connector",
+    "ironrdp/session",
+    "ironrdp/graphics",
+    # MS-RDPEGFX graphics-pipeline DVC (ADR 0053). Enables the meta-crate's
+    # `dvc` re-export so `ironrdp::dvc::{DvcProcessor, DrdynvcClient, ...}` is in
+    # scope for the in-tree AVC420 handler (`src/egfx.rs`). Folded into
+    # `ironrdp_live` so session_live gets it without a second build variant.
+    "ironrdp/dvc",
+    # CLIPBOARD virtual channel (ADR 0054). Enables the meta-crate's `cliprdr`
+    # re-export so `ironrdp::cliprdr::{Cliprdr, CliprdrBackend, pdu::*}` is in
+    # scope. Folded into `ironrdp_live` (not a separate feature) so the
+    # session_live bin gets it without a second build variant; the default
+    # build's surface is still unchanged (the whole `ironrdp_live` set is off).
+    "ironrdp/cliprdr",
+]
+
+[[bin]]
+name = "credssp_live"
+path = "src/bin/credssp_live.rs"
+required-features = ["ironrdp_live"]
+
+[[bin]]
+name = "frames_live"
+path = "src/bin/frames_live.rs"
+required-features = ["ironrdp_live"]
+
+# P2b streaming session core (feat/rdp-p2b-stream): drives the live
+# bidirectional stream (DESKTOP_SIZE/FRAME/CLOSE out, MOUSE/KEY in) over
+# stdout/stdin per the Go↔Rust bridge wire protocol. ironrdp_live-gated.
+[[bin]]
+name = "session_live"
+path = "src/bin/session_live.rs"
+required-features = ["ironrdp_live"]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }

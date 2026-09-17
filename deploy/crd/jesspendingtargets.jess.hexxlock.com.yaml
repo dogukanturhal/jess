@@ -1,0 +1,130 @@
+---
+# JessPendingTarget — Phase E (auto-discovery program). A candidate target
+# surfaced by a DiscoveryProvider that has NOT been onboarded into the live
+# catalog yet. The reconciler in jess-controller evaluates a Rego policy
+# against the candidate; on `allow=true` it creates the corresponding
+# JessTarget CR (which the jesstargetcrd provider sees on the next informer
+# tick) and deletes the PendingTarget; on `allow=false` it marks the
+# PendingTarget with status.rejected=true + the policy reason.
+#
+# Deep-research wf_eeb3aa50-3b5 (2026-06-06) confirmed this candidate→pending
+# →onboarded lifecycle is a genuine market gap — no surveyed tier-1 vendor
+# ships all four states with policy-driven promotion. jess is the first.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: jesspendingtargets.jess.hexxlock.com
+spec:
+  group: jess.hexxlock.com
+  scope: Cluster
+  names:
+    plural: jesspendingtargets
+    singular: jesspendingtarget
+    kind: JessPendingTarget
+    shortNames: [jpt]
+    listKind: JessPendingTargetList
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [protocol, address, source]
+              properties:
+                # Identical to JessTarget.spec — the "promoted" object is
+                # the JessTarget CR built directly from these fields (no
+                # operator transformation needed in the common path).
+                name:
+                  type: string
+                protocol:
+                  type: string
+                  enum: [tcp, ssh, postgres, mysql, rdp]
+                address:
+                  type: string
+                  pattern: '^[^:]+:[0-9]{1,5}$'
+                region:
+                  type: string
+                required_roles:
+                  type: array
+                  items: { type: string }
+                recorded:
+                  type: boolean
+                  default: true
+                host_key:
+                  type: string
+                host_key_ca_signed:
+                  type: boolean
+                  default: false
+                database:
+                  type: string
+                criticality:
+                  type: string
+                  enum: [low, medium, high, critical]
+                  default: medium
+                tags:
+                  type: array
+                  items: { type: string }
+                require_device_claims:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      claim: { type: string }
+                      valuesAnyOf:
+                        type: array
+                        items: { type: string }
+                # Phase E additions — discovery provenance for Rego.
+                source:
+                  type: string
+                  description: "DiscoveryProvider Name() that surfaced this candidate (ldap, k8s-services, proxmox, ...)"
+                source_ref:
+                  type: string
+                  description: "Provider-specific stable identifier (e.g. AD distinguishedName, Service UID, Proxmox VMID)"
+                discovered_at:
+                  type: string
+                  format: date-time
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum: [Pending, Promoted, Rejected]
+                  description: "Pending = awaiting Rego eval, Promoted = JessTarget CR exists, Rejected = policy denied"
+                decision_at:
+                  type: string
+                  format: date-time
+                policy_reason:
+                  type: string
+                  description: "Reason text the Rego rule returned"
+                promoted_target_ref:
+                  type: string
+                  description: "metadata.name of the JessTarget CR created on promotion"
+                attempts:
+                  type: integer
+                  description: "Number of reconciliation attempts (catches stuck reconciles)"
+      additionalPrinterColumns:
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Source
+          type: string
+          jsonPath: .spec.source
+        - name: Protocol
+          type: string
+          jsonPath: .spec.protocol
+        - name: Address
+          type: string
+          jsonPath: .spec.address
+        - name: Reason
+          type: string
+          jsonPath: .status.policy_reason
+        - name: Discovered
+          type: date
+          jsonPath: .spec.discovered_at
+      subresources:
+        status: {}

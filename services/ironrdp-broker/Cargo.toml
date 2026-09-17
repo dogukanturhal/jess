@@ -1,0 +1,190 @@
+# jess IronRDP web-RDP broker — Phase 5f. This is a SIBLING binary to
+# jess-controller / jess-worker / jess-web; it lives under services/ to
+# keep the Rust toolchain out of the Go module graph (the Go build
+# scripts skip non-Go subtrees by default).
+#
+# Wire pattern mirrors jess-web's SSH bridge:
+#   Browser  --WSS-->  ironrdp-broker  --RDP-->  Windows target
+#                       ^
+#                       + Falcon-ID JWT verify (same JWKS as jess-web)
+#                       + Grant lookup against jess-controller admin port
+#                       + WORM recording sink (Phase 5f-2, deferred)
+#
+# Why a separate binary not a jess-worker plugin: RDP framing is a
+# big stack (X.224 / MCS / GCC / fastpath / RDPDR / RDPGFX). Devolutions
+# ironrdp is a Rust crate, has no Go equivalent of comparable maturity.
+# Keeping it isolated also means Windows-target ops can flip the broker
+# off at the IngressRoute without touching SSH/DB traffic.
+[workspace]
+resolver = "2"
+members = [
+    "crates/proxy-core",
+    "crates/broker-bin",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+# Rust 1.89 is the floor for the IronRDP 0.15 / sspi 0.21 dep tree.
+# Bumped 2026-06-02 alongside the ironrdp family upgrade that fixed
+# the sspi 0.15.14 ↔ picky 7.0.0-rc.23 build break (sspi removed the
+# `From<&picky::key::PrivateKey>` impl + `from_rsa_components` switched
+# to `&BoxedUint` from `&BigUint`). Keep in lockstep with
+# rust-toolchain.toml channel + Dockerfile ARG RUST_VERSION.
+rust-version = "1.89"
+license = "Apache-2.0"
+repository = "https://github.com/dogukanturhal/jess"
+
+[workspace.dependencies]
+# HTTP / WebSocket
+axum = { version = "0.7", features = ["ws", "macros"] }
+tokio = { version = "1.42", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace", "timeout"] }
+
+# Auth
+jsonwebtoken = "9"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+
+# Serialisation
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Telemetry
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Time. `serde-well-known` is REQUIRED by proxy-core/src/grant.rs
+# (`#[serde(with = "time::serde::rfc3339")]`). It was previously only present
+# by Cargo feature-unification when the FULL workspace (broker-bin) was built,
+# so a single-crate build (`cargo build -p jess-ironrdp-proxy-core`, used by the
+# jess-web image's session_live stage) failed to compile grant.rs (E0425
+# `time::serde::rfc3339::deserialize` not found). Declaring it explicitly makes
+# the rfc3339 helper available regardless of which crate/feature set is built —
+# the broker-bin build already had it via unification, so this is a no-op there.
+time = { version = "0.3", features = ["serde", "serde-well-known", "macros"] }
+
+# RDP — Devolutions ironrdp. EXACT pins (= prefix) — loose semver
+# inside this stack burns hours on incompatible Pdu/Connector pairs.
+# proxy-core re-exports the subset we use so broker-bin doesn't depend
+# on internal ironrdp shape changes.
+#
+# 2026-06-02 upgrade — bumped from 0.10/0.5/0.5/0.5 to 0.15/0.8/0.9/0.7
+# to escape the sspi 0.15.14 ↔ picky 7.0.0-rc.23 build break. Verified
+# 2026-06-04 against the live crates.io registry:
+#   - ironrdp-connector =0.9.0  → requires `sspi = "^0.21"`
+#   - sspi              0.21.0  → requires `crypto-bigint = "^0.7"`
+#                                          `picky = "=7.0.0-rc.23"`
+#                                          `rsa   = "=0.10.0-rc.17"`
+# This triplet is the known-good post-BoxedUint-migration combination.
+#
+# Pins are `= X.Y.Z` (exact) not `X.Y` (caret): caret semver would let the
+# resolver drift to a hypothetical 0.15.1 / 0.8.1 / 0.9.1 / 0.7.1 that could
+# reintroduce the kind of upstream API skew this MR fixes. The exact pins
+# here bound the FOUR top-level crates; the committed Cargo.lock (built with
+# `--locked` in the Dockerfile) additionally pins the FULL transitive tree
+# with per-crate checksums, so nothing drifts in via a transitive either.
+#
+# When you bump these intentionally:
+#   1. Update all FOUR lines together (Devolutions releases ironrdp +
+#      pdu + connector + svc in lockstep).
+#   2. Re-verify the sspi/picky/crypto-bigint triplet on crates.io.
+#   3. If rust-version on any of the four bumps, sync rust-toolchain.
+#      toml + Dockerfile ARG RUST_VERSION in the same commit.
+#
+# proxy-core does NOT yet `use` any ironrdp types (Phase 5f-1 scaffold
+# per the lib.rs header), so the bump is a pure dep-graph refresh
+# with no API porting cost. Phase 5f-8b (jess/docs/adr/0033-phase-5f-
+# rust-ironrdp-bridge.md) will exercise the actual Connector + Pdu
+# APIs and will be coded against whatever surface ships in these
+# versions at that point.
+ironrdp = { version = "=0.15.0", default-features = false }
+ironrdp-pdu = { version = "=0.8.0", default-features = false }
+ironrdp-connector = { version = "=0.9.0", default-features = false }
+ironrdp-svc = { version = "=0.7.0", default-features = false }
+
+# Live-CredSSP handshake helpers (ADR 0051 — feat/rdp-credssp-live, the
+# gating-risk spike). OPTIONAL everywhere; only pulled in under
+# proxy-core's `ironrdp_live` feature so default builds/CI are byte-for-
+# byte unchanged. The first FOUR pins above are the connector family; the
+# crates below are the official async transport + TLS + SSPI/CredSSP +
+# server-side session decode stack the upstream `screenshot.rs` example
+# uses. Versions verified 2026-06-20 against the live crates.io registry
+# AND the already-locked transitive tree (Cargo.lock already carries
+# rustls 0.23 / tokio-rustls 0.26 / x509-cert 0.2.5 / aws-lc-rs as
+# transitives of this same ironrdp/sspi family — adding them as direct
+# deps does not move the lock):
+#   - ironrdp-async  =0.9.0  → connect_begin / mark_as_upgraded /
+#                              connect_finalize (drives the connector
+#                              state machine incl. the CredSSP sub-seq).
+#   - ironrdp-tokio  =0.9.0  → `TokioFramed` (Framed over tokio I/O) +
+#                              re-exports the ironrdp-async helpers.
+#   - ironrdp-session =0.9.0 → `ActiveStage` / `DecodedImage` for the
+#                              OPTIONAL post-Connected single-frame pull
+#                              (server-side decode, ADR 0051 frame model).
+#   - sspi           =0.21.0 → `ReqwestNetworkClient` (NetworkClient impl
+#                              connect_finalize requires) + the in-process
+#                              NTLM/CredSSP engine. `network_client`
+#                              feature; `aws-lc-rs` (its default) installs
+#                              the rustls crypto provider this stack uses.
+#   - tokio-rustls   =0.26   → TLS enhanced-security upgrade. Re-exports
+#                              `rustls` (0.23). Default features (tls12 +
+#                              aws_lc_rs) match the rest of the tree.
+#   - x509-cert      =0.2    → parse the server leaf cert to lift the
+#                              SubjectPublicKeyInfo bytes CredSSP binds to.
+# NOTE: `optional` lives on the per-crate dep line (proxy-core), not here
+# — `[workspace.dependencies]` entries cannot be optional.
+ironrdp-async = { version = "=0.9.0", default-features = false }
+ironrdp-tokio = { version = "=0.9.0", default-features = false }
+ironrdp-session = { version = "=0.9.0", default-features = false }
+sspi = { version = "=0.21.0", default-features = false, features = ["network_client", "aws-lc-rs"] }
+tokio-rustls = { version = "=0.26.4" }
+x509-cert = { version = "=0.2.5", default-features = false, features = ["std"] }
+zeroize = { version = "1" }
+# PNG encoder for the P2a "first pixels" decode (ADR 0051,
+# feat/rdp-p2-decode). Writes `DecodedImage`'s tightly-packed RGBA8
+# framebuffer straight to disk. Lighter than the upstream example's
+# `image` crate (no extra codec tree); its deps — bitflags / crc32fast /
+# fdeflate / flate2 / miniz_oxide — are ALL already in the locked tree or
+# offline cache. OPTIONAL everywhere; only pulled under proxy-core's
+# `ironrdp_live` feature so default builds/CI are byte-for-byte unchanged.
+png = { version = "=0.17.16", default-features = false }
+# LOSSY WebP encoder for the Tier-1 live dirty-rect stream (ADR 0051,
+# feat/rdp-tier1-webp-offthread). `default-features = false` drops the crate's
+# `img` feature (which would pull the WHOLE `image` codec tree); we only use the
+# raw `Encoder::from_rgba(..).encode(q)` path. Its only build deps are
+# `libwebp-sys` (vendored libwebp, built via `cc`) + `libc`. OPTIONAL everywhere;
+# pulled only under proxy-core's `ironrdp_live` feature so default builds/CI are
+# byte-for-byte unchanged. PNG above stays the lossless encoder for the WORM
+# recording path; WebP is the live wire only.
+webp = { version = "=0.3.1", default-features = false }
+# SOFTWARE H.264 encoder for the GPU-free "native-feel" live path (ADR 0061).
+# session_live decodes RDP → an RGBA framebuffer; this CPU-encodes that
+# framebuffer as low-latency H.264 → MSG_H264, reusing the browser WebCodecs
+# decoder + the WORM recorder + the WebTransport datagram transport. NO GPU
+# needed anywhere (unlike the host-AVC EGFX path), and it works against ANY RDP
+# target. `openh264-sys2` compiles the bundled Cisco OpenH264 C source via `cc`
+# — the same C-build path the `webp`/`libwebp-sys` dep already uses, so no new
+# toolchain requirement (nasm is added to the builder image only for the ~3x
+# encode speedup). OPTIONAL; pulled only under proxy-core's `ironrdp_live`
+# feature so default builds/CI are byte-for-byte unchanged. H.264 patent note in
+# ADR 0061 (same exposure as the existing EGFX/WebCodecs H.264 paths).
+openh264 = { version = "=0.6.6", default-features = false, features = ["source"] }
+
+# --- Vendored patch: ironrdp-connector + MS-RDPEGFX GFX-protocol advertise ---
+# Upstream ironrdp-connector 0.9.0 hardcodes the GCC client early-capability
+# flags WITHOUT `SUPPORT_DYN_VC_GFX_PROTOCOL` and exposes no Config hook (see
+# vendor/ironrdp-connector/src/connection.rs). Without that flag a Windows host
+# never opens the MS-RDPEGFX (Microsoft::Windows::RDS::Graphics) dynamic channel,
+# so the in-tree AVC420 handler (proxy-core/src/egfx.rs, ADR 0053) stays inert
+# and graphics fall back to the WebP bitmap path (verified live against
+# mail-server 10.0.20.20). This patch carries a one-line addition of that flag.
+# It is a vendored copy of the EXACT 0.9.0 source (no other changes) — NOT an
+# upstream PR. Scoped to this workspace; the default jess build is unaffected
+# (the connector is only compiled under proxy-core's `ironrdp_live` feature).
+[patch.crates-io]
+ironrdp-connector = { path = "vendor/ironrdp-connector" }

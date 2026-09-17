@@ -1,0 +1,1158 @@
+/* ============================================================================
+   HEXXLOCK JESS — C2 design-system styles
+   vSphere/vCenter-style command-center: masthead + inventory rail + content.
+   Built on src/styles/tokens.css. Never hardcode hex — reference tokens.
+   ============================================================================ */
+
+/* ============================ App shell ==================================== */
+/* Carbon UI Shell: the <Header> (.c2-shell-masthead) is position:fixed top:0
+   height 3rem, and the <SideNav> rail (.c2-shell-rail) is position:fixed below
+   it. The content slot is offset by the fixed chrome (top = header height,
+   left = rail width) and scrolls independently. */
+.c2-shell {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--hxm-bg);
+}
+
+/* Carbon Header lives at the top fixed band — let it own its own positioning. */
+.c2-shell-masthead { z-index: 8000; }
+
+/* The rail wrapper is a passthrough — Carbon SideNav inside is position:fixed. */
+.c2-shell-rail { min-height: 0; }
+
+.c2-shell-content {
+  position: absolute;
+  top: var(--c2-masthead-h);
+  left: var(--c2-rail-w);
+  right: 0;
+  bottom: 0;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.c2-shell.is-collapsed .c2-shell-content { left: var(--c2-rail-w-collapsed); }
+
+/* Console variant — header + full-bleed content, NO rail. */
+.c2-shell.is-console .c2-shell-console-content {
+  position: absolute;
+  top: var(--c2-masthead-h);
+  left: 0; right: 0; bottom: 0;
+  min-width: 0; min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Narrow viewports: Carbon SideNav collapses to an overlay; reclaim the
+   content's left offset so it isn't pushed by a hidden rail. */
+@media (max-width: 66rem) {
+  .c2-shell-content { left: 0; }
+}
+
+/* ============================ Masthead ===================================== */
+.c2-masthead {
+  height: var(--c2-masthead-h);
+  background: var(--c2-masthead);
+  border-bottom: 1px solid var(--hxm-line);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  color: var(--hxm-ink-0);
+}
+.c2-brand {
+  display: flex; align-items: center; gap: 9px;
+  color: var(--hxm-ink-0);
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.c2-brand:hover { text-decoration: none; color: var(--hxm-ink-0); }
+.c2-brand-mark { width: 22px; height: 22px; display: block; color: var(--c2-accent); }
+.c2-brand-name {
+  font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase;
+  font-weight: 700;
+}
+.c2-brand-name .c2-brand-name-2 { color: var(--c2-accent); }
+
+/* Real JESS wordmark inside Carbon's <HeaderName>. The SVG inherits
+   currentColor (white on the g100 masthead). Vertically centered; the
+   Carbon "HEXXLOCK" prefix sits to its left as a muted context label. */
+.c2-brand-wordmark {
+  display: block;
+  height: 16px;
+  width: auto;
+  color: var(--hxm-ink-0);
+}
+.cds--header__name .c2-brand-wordmark { margin-block: 2px; }
+
+.c2-masthead-search {
+  flex: 1;
+  max-width: 460px;
+  height: 30px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-md);
+  color: var(--hxm-ink-2);
+  cursor: text;
+  font-size: 12.5px;
+  transition: border-color 120ms var(--hxm-ease-out), background-color 120ms var(--hxm-ease-out);
+}
+.c2-masthead-search:hover { border-color: var(--hxm-line-h); background: rgba(255,255,255,0.07); }
+.c2-masthead-search:focus-visible { outline: none; border-color: var(--c2-accent); }
+.c2-masthead-search .c2-kbd-hint { margin-left: auto; }
+
+.c2-masthead-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.c2-icon-btn {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  padding: 0;
+  background: transparent;
+  color: var(--hxm-ink-2);
+  border: 1px solid transparent;
+  border-radius: var(--hxm-r-md);
+  cursor: pointer;
+  font-size: 15px; line-height: 1;
+  transition: color 120ms var(--hxm-ease-out), background-color 120ms var(--hxm-ease-out);
+}
+.c2-icon-btn:hover { color: var(--hxm-ink-0); background: rgba(255,255,255,0.06); }
+.c2-icon-btn:focus-visible { outline: none; border-color: var(--c2-accent); }
+.c2-icon-badge {
+  position: absolute; top: 2px; right: 2px;
+  min-width: 15px; height: 15px; padding: 0 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; line-height: 1;
+  color: #fff; background: var(--c2-danger);
+  border-radius: var(--hxm-r-pill);
+  border: 1.5px solid var(--c2-masthead);
+}
+
+/* user menu */
+.c2-usermenu { position: relative; }
+.c2-usermenu-trigger {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 32px; padding: 0 8px;
+  background: transparent; color: var(--hxm-ink-1);
+  border: 1px solid transparent; border-radius: var(--hxm-r-md);
+  cursor: pointer; font: inherit; font-size: 12.5px;
+}
+.c2-usermenu-trigger:hover { background: rgba(255,255,255,0.06); color: var(--hxm-ink-0); }
+.c2-usermenu-trigger:focus-visible { outline: none; border-color: var(--c2-accent); }
+.c2-avatar {
+  width: 22px; height: 22px; border-radius: var(--hxm-r-pill);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--c2-accent); color: var(--c2-accent-ink);
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+}
+.c2-usermenu-caret { color: var(--hxm-ink-3); font-size: 9px; }
+.c2-usermenu-pop {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 200;
+  min-width: 240px;
+  background: var(--hxm-s1);
+  border: 1px solid var(--hxm-line-h);
+  border-radius: var(--hxm-r-lg);
+  box-shadow: var(--hxm-sh-3);
+  padding: 6px;
+}
+.c2-usermenu-head { padding: 8px 10px 10px; border-bottom: 1px solid var(--hxm-line); margin-bottom: 6px; }
+.c2-usermenu-email { font-size: 12.5px; color: var(--hxm-ink-0); font-weight: 500; word-break: break-all; }
+.c2-usermenu-role { font-size: 11px; color: var(--hxm-ink-3); margin-top: 2px; }
+.c2-usermenu-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 7px 10px;
+  font: inherit; font-size: 12.5px; text-align: left;
+  color: var(--hxm-ink-1); background: transparent;
+  border: none; border-radius: var(--hxm-r-sm); cursor: pointer;
+}
+.c2-usermenu-item:hover { background: var(--hxm-s2); color: var(--hxm-ink-0); text-decoration: none; }
+.c2-usermenu-item.is-danger { color: var(--c2-danger); }
+
+/* ============================ Inventory rail =============================== */
+.c2-rail {
+  height: 100%;
+  background: var(--c2-rail);
+  border-right: 1px solid var(--hxm-line);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+  padding: 8px 0 12px;
+}
+.c2-rail-section-label {
+  padding: 12px 16px 4px;
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--hxm-ink-3); font-weight: 600;
+}
+.c2-shell.is-collapsed .c2-rail-section-label { display: none; }
+
+.c2-rail-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 7px 16px;
+  border: none; border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--hxm-ink-1);
+  font: inherit; font-size: 12.5px;
+  text-align: left; text-decoration: none;
+  cursor: pointer;
+  transition: background-color 100ms var(--hxm-ease-out), color 100ms var(--hxm-ease-out);
+}
+.c2-rail-item:hover { background: var(--hxm-s2); color: var(--hxm-ink-0); text-decoration: none; }
+.c2-rail-item.is-active {
+  background: var(--c2-rail-active-bg);
+  color: var(--hxm-ink-0);
+  border-left-color: var(--c2-accent);
+}
+.c2-rail-item-icon { width: 18px; text-align: center; color: var(--hxm-ink-2); flex: 0 0 auto; font-size: 13px; }
+.c2-rail-item.is-active .c2-rail-item-icon { color: var(--c2-accent); }
+.c2-rail-item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c2-rail-item-count {
+  font-family: var(--hxm-f-mono);
+  font-size: 11px; color: var(--hxm-ink-3);
+  background: var(--hxm-s3);
+  padding: 0 6px; border-radius: var(--hxm-r-pill); min-width: 20px; text-align: center;
+}
+.c2-rail-item.is-active .c2-rail-item-count { color: var(--c2-accent); background: var(--c2-accent-lo); }
+.c2-rail-item-caret { color: var(--hxm-ink-3); font-size: 9px; width: 10px; flex: 0 0 auto; transition: transform 120ms var(--hxm-ease-out); }
+.c2-rail-item-caret.is-open { transform: rotate(90deg); }
+
+/* sub-rows (per-protocol status) */
+.c2-rail-sub { display: flex; align-items: center; gap: 8px; padding: 5px 16px 5px 40px; font-size: 12px; color: var(--hxm-ink-2); text-decoration: none; border-left: 2px solid transparent; }
+.c2-rail-sub:hover { background: var(--hxm-s2); color: var(--hxm-ink-0); text-decoration: none; }
+.c2-rail-sub.is-active { background: var(--c2-rail-active-bg); color: var(--hxm-ink-0); border-left-color: var(--c2-accent); }
+.c2-rail-sub-label { flex: 1; }
+.c2-rail-sub-count { font-family: var(--hxm-f-mono); font-size: 11px; color: var(--hxm-ink-3); }
+
+.c2-shell.is-collapsed .c2-rail-item { justify-content: center; padding: 9px 0; gap: 0; }
+.c2-shell.is-collapsed .c2-rail-item-label,
+.c2-shell.is-collapsed .c2-rail-item-count,
+.c2-shell.is-collapsed .c2-rail-item-caret,
+.c2-shell.is-collapsed .c2-rail-sub { display: none; }
+
+.c2-rail-footer { margin-top: auto; padding: 10px 12px 4px; }
+.c2-rail-collapse {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 6px 8px; font: inherit; font-size: 11.5px;
+  color: var(--hxm-ink-3); background: transparent;
+  border: 1px solid var(--hxm-line); border-radius: var(--hxm-r-md); cursor: pointer;
+}
+.c2-rail-collapse:hover { color: var(--hxm-ink-1); border-color: var(--hxm-line-h); }
+.c2-shell.is-collapsed .c2-rail-collapse { justify-content: center; }
+.c2-shell.is-collapsed .c2-rail-collapse span:last-child { display: none; }
+
+/* ============================ Page header ================================== */
+.c2-page { padding: 0 0 40px; flex: 1; min-width: 0; }
+.c2-page-header {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--hxm-bg);
+  border-bottom: 1px solid var(--hxm-line);
+  padding: 12px 22px 12px;
+}
+.c2-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--hxm-ink-3); margin-bottom: 4px; }
+.c2-breadcrumb a { color: var(--hxm-ink-3); }
+.c2-breadcrumb a:hover { color: var(--c2-accent); }
+.c2-breadcrumb-sep { color: var(--hxm-ink-4); }
+.c2-page-header-row { display: flex; align-items: center; gap: 16px; }
+.c2-page-title { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: var(--hxm-ink-0); display: flex; align-items: center; gap: 10px; }
+.c2-page-subtitle { margin: 3px 0 0; font-size: 12.5px; color: var(--hxm-ink-2); }
+.c2-page-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.c2-page-body { padding: 18px 22px 0; display: flex; flex-direction: column; gap: 16px; }
+
+/* ============================ Panel / Card ================================ */
+.c2-panel {
+  background: var(--hxm-s1);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-lg);
+}
+.c2-panel-pad { padding: 16px 18px; }
+.c2-panel-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--hxm-line);
+}
+.c2-panel-title { margin: 0; font-size: 13px; font-weight: 600; color: var(--hxm-ink-0); letter-spacing: 0.01em; }
+.c2-panel-title .c2-panel-icon { color: var(--hxm-ink-2); margin-right: 7px; }
+.c2-panel-sub { margin: 2px 0 0; font-size: 11.5px; color: var(--hxm-ink-3); }
+.c2-panel-head-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.c2-panel-body { padding: 0; }
+
+/* ============================ Buttons ===================================== */
+.c2-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 30px; padding: 0 13px;
+  font: inherit; font-size: 12.5px; font-weight: 500;
+  border-radius: var(--hxm-r-md);
+  border: 1px solid transparent;
+  cursor: pointer; white-space: nowrap;
+  transition: background-color 110ms var(--hxm-ease-out), border-color 110ms var(--hxm-ease-out), color 110ms var(--hxm-ease-out);
+}
+.c2-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.c2-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--hxm-bg), 0 0 0 4px var(--c2-accent); }
+.c2-btn-sm { height: 25px; padding: 0 9px; font-size: 11.5px; }
+
+.c2-btn-primary { background: var(--c2-accent); color: var(--c2-accent-ink); border-color: var(--c2-accent); font-weight: 600; }
+.c2-btn-primary:hover:not(:disabled) { background: var(--c2-accent-hi); border-color: var(--c2-accent-hi); text-decoration: none; color: var(--c2-accent-ink); }
+
+.c2-btn-ghost { background: transparent; color: var(--hxm-ink-1); border-color: var(--hxm-line-h); }
+.c2-btn-ghost:hover:not(:disabled) { background: var(--hxm-s2); color: var(--hxm-ink-0); border-color: var(--hxm-line-h); text-decoration: none; }
+
+.c2-btn-danger { background: transparent; color: var(--c2-danger); border-color: rgba(239,68,68,0.4); }
+.c2-btn-danger:hover:not(:disabled) { background: rgba(239,68,68,0.12); border-color: var(--c2-danger); text-decoration: none; color: var(--c2-danger); }
+
+.c2-btn-icon { width: 30px; padding: 0; }
+.c2-btn-icon.c2-btn-sm { width: 25px; }
+
+/* split / dropdown button */
+.c2-btn-split { position: relative; display: inline-flex; }
+.c2-btn-split-menu {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 50;
+  min-width: 180px;
+  background: var(--hxm-s1); border: 1px solid var(--hxm-line-h);
+  border-radius: var(--hxm-r-md); box-shadow: var(--hxm-sh-2); padding: 4px;
+}
+.c2-menu-item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 10px; font: inherit; font-size: 12.5px; text-align: left;
+  color: var(--hxm-ink-1); background: transparent; border: none;
+  border-radius: var(--hxm-r-sm); cursor: pointer; text-decoration: none;
+}
+.c2-menu-item:hover:not(:disabled) { background: var(--hxm-s2); color: var(--hxm-ink-0); text-decoration: none; }
+.c2-menu-item:disabled { opacity: 0.45; cursor: not-allowed; }
+.c2-menu-item-hint { margin-left: auto; font-size: 10.5px; color: var(--hxm-ink-3); }
+
+/* ============================ Status badge / dot ========================== */
+.c2-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 1px 7px; height: 18px;
+  font-size: 11px; font-weight: 600; line-height: 1;
+  border-radius: var(--hxm-r-pill);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.c2-badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+.c2-badge-online  { color: var(--c2-online); background: rgba(34,197,94,0.12); }
+.c2-badge-online  .c2-badge-dot { background: var(--c2-online); }
+.c2-badge-warn    { color: var(--c2-warn);   background: rgba(245,158,11,0.13); }
+.c2-badge-warn    .c2-badge-dot { background: var(--c2-warn); }
+.c2-badge-danger  { color: var(--c2-danger); background: rgba(239,68,68,0.13); }
+.c2-badge-danger  .c2-badge-dot { background: var(--c2-danger); }
+.c2-badge-offline,
+.c2-badge-mute    { color: var(--hxm-ink-2); background: var(--hxm-s3); }
+.c2-badge-offline .c2-badge-dot,
+.c2-badge-mute    .c2-badge-dot { background: var(--c2-mute); }
+.c2-badge-info    { color: var(--c2-accent); background: var(--c2-accent-lo); }
+.c2-badge-info    .c2-badge-dot { background: var(--c2-accent); }
+
+/* standalone dot */
+.c2-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.c2-dot-online  { background: var(--c2-online); }
+.c2-dot-warn    { background: var(--c2-warn); }
+.c2-dot-offline { background: var(--c2-mute); }
+.c2-dot-danger  { background: var(--c2-danger); }
+.c2-dot-pulse {
+  box-shadow: 0 0 0 0 rgba(34,197,94,0.45);
+  animation: c2-pulse 1.6s var(--hxm-ease-out) infinite;
+}
+@keyframes c2-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.45); }
+  70%  { box-shadow: 0 0 0 7px rgba(34,197,94,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+}
+@media (prefers-reduced-motion: reduce) { .c2-dot-pulse { animation: none; } }
+
+/* ============================ DataGrid ==================================== */
+.c2-grid-wrap { overflow: auto; }
+.c2-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+}
+.c2-grid thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--c2-grid-head);
+  text-align: left;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase;
+  color: var(--hxm-ink-2);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hxm-line-h);
+  white-space: nowrap;
+  user-select: none;
+}
+.c2-grid thead th.is-sortable { cursor: pointer; }
+.c2-grid thead th.is-sortable:hover { color: var(--hxm-ink-0); }
+.c2-grid-sort-arrow { margin-left: 5px; color: var(--c2-accent); font-size: 9px; }
+.c2-grid thead th.is-numeric, .c2-grid td.is-numeric { text-align: right; font-variant-numeric: tabular-nums; }
+.c2-grid tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hxm-line);
+  color: var(--hxm-ink-1);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.c2-grid tbody tr:nth-child(even) td { background: var(--c2-grid-zebra); }
+.c2-grid tbody tr:hover td { background: var(--c2-grid-hover); }
+.c2-grid tbody tr.is-selected td { background: var(--c2-accent-lo); }
+.c2-grid tbody tr.is-clickable { cursor: pointer; }
+.c2-grid-mono { font-family: var(--hxm-f-mono); color: var(--hxm-ink-1); }
+.c2-grid-mute { color: var(--hxm-ink-3); }
+.c2-grid-checkbox { width: 34px; text-align: center; }
+.c2-grid-rowactions { display: inline-flex; gap: 6px; align-items: center; }
+.c2-grid-empty { padding: 36px 16px; text-align: center; color: var(--hxm-ink-3); font-size: 12.5px; }
+
+/* tag chips inside grids */
+.c2-tag { display: inline-block; padding: 1px 6px; margin-right: 4px; font-size: 10.5px; color: var(--hxm-ink-2); background: var(--hxm-s3); border-radius: var(--hxm-r-pill); font-family: var(--hxm-f-mono); }
+
+/* ============================ DetailTabs ================================== */
+.c2-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--hxm-line); padding: 0 6px; }
+.c2-tab {
+  position: relative;
+  padding: 9px 14px;
+  font: inherit; font-size: 12.5px; font-weight: 500;
+  color: var(--hxm-ink-2); background: transparent; border: none;
+  border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px;
+}
+.c2-tab:hover { color: var(--hxm-ink-0); }
+.c2-tab.is-active { color: var(--hxm-ink-0); border-bottom-color: var(--c2-accent); }
+.c2-tab-count { margin-left: 6px; font-size: 11px; color: var(--hxm-ink-3); font-family: var(--hxm-f-mono); }
+
+/* ============================ KeyValueList ================================ */
+.c2-kv { display: grid; grid-template-columns: minmax(140px, max-content) 1fr; gap: 0; }
+.c2-kv-row { display: contents; }
+.c2-kv-key { padding: 9px 16px; font-size: 12px; color: var(--hxm-ink-2); border-bottom: 1px solid var(--hxm-line); }
+.c2-kv-val { padding: 9px 16px; font-size: 12.5px; color: var(--hxm-ink-0); border-bottom: 1px solid var(--hxm-line); word-break: break-word; }
+.c2-kv-row:last-child .c2-kv-key, .c2-kv-row:last-child .c2-kv-val { border-bottom: none; }
+
+/* ============================ KPI tile =================================== */
+.c2-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.c2-kpi {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 14px 16px;
+  background: var(--hxm-s1); border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-lg);
+  text-decoration: none;
+  transition: border-color 120ms var(--hxm-ease-out);
+}
+a.c2-kpi:hover { border-color: var(--hxm-line-h); text-decoration: none; }
+.c2-kpi-label { display: flex; align-items: center; gap: 7px; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--hxm-ink-3); font-weight: 600; }
+.c2-kpi-icon { color: var(--hxm-ink-2); font-size: 13px; }
+.c2-kpi-value { font-size: 26px; font-weight: 700; color: var(--hxm-ink-0); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.c2-kpi-accent .c2-kpi-value { color: var(--c2-accent); }
+.c2-kpi-hint { font-size: 11px; color: var(--hxm-ink-3); }
+
+/* ============================ Toolbar / filters ========================== */
+.c2-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--hxm-line); }
+.c2-toolbar-spacer { margin-left: auto; }
+.c2-input, .c2-select {
+  height: 28px; padding: 0 10px;
+  font: inherit; font-size: 12.5px;
+  background: var(--hxm-bg); color: var(--hxm-ink-0);
+  border: 1px solid var(--hxm-line-h); border-radius: var(--hxm-r-md);
+  outline: none;
+}
+.c2-input::placeholder { color: var(--hxm-ink-3); }
+.c2-input:focus, .c2-select:focus, .c2-textarea:focus { border-color: var(--c2-accent); }
+.c2-input-mono { font-family: var(--hxm-f-mono); }
+
+/* Drag-and-drop CSV zone (DevicePreReg). Click anywhere to open the file picker;
+   drop a file to import. The native input is visually hidden inside it. */
+.c2-dropzone {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 64px; padding: 14px;
+  background: var(--hxm-bg); color: var(--hxm-ink-2);
+  border: 1px dashed var(--hxm-line-h); border-radius: var(--hxm-r-md);
+  cursor: pointer; text-align: center; font-size: 12.5px;
+  transition: border-color .12s ease, background .12s ease, color .12s ease;
+}
+.c2-dropzone:hover, .c2-dropzone:focus-visible { border-color: var(--c2-accent); color: var(--hxm-ink-0); outline: none; }
+.c2-dropzone.is-dragging { border-color: var(--c2-accent); border-style: solid; background: var(--hxm-bg-1); color: var(--hxm-ink-0); }
+.c2-dropzone-hint { pointer-events: none; }
+.c2-textarea {
+  width: 100%; padding: 10px 12px;
+  font-family: var(--hxm-f-mono); font-size: 12.5px; line-height: 1.5;
+  background: var(--hxm-bg); color: var(--hxm-ink-0);
+  border: 1px solid var(--hxm-line-h); border-radius: var(--hxm-r-md);
+  resize: vertical; outline: none; box-sizing: border-box;
+}
+.c2-field { display: flex; flex-direction: column; gap: 5px; }
+.c2-field label { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--hxm-ink-2); }
+.c2-field-hint { font-size: 11px; color: var(--hxm-ink-3); }
+
+/* ---- Settings rows + segmented toggle (RDP session settings dialog) ---- */
+/* A labelled control row: a radio/checkbox + label + an optional right-aligned
+   control (select / number inputs). Used by the RDP "Session settings" dialog. */
+.c2-settings-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 0; font-size: 12.5px; color: var(--hxm-ink-1);
+}
+.c2-settings-row + .c2-settings-row { border-top: 1px solid var(--hxm-line); }
+.c2-settings-row input[type="radio"] { accent-color: var(--c2-accent); margin: 0; }
+.c2-settings-row .c2-field-hint { display: inline; }
+/* Segmented toggle (e.g. DPI 1× / 1.25× / 1.5× / 2×). */
+.c2-segment {
+  display: inline-flex; align-self: flex-start;
+  border: 1px solid var(--hxm-line-h); border-radius: var(--hxm-r-md);
+  overflow: hidden; background: var(--hxm-bg);
+}
+.c2-segment-btn {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-size: 12.5px; color: var(--hxm-ink-2);
+  padding: 5px 12px; min-width: 44px;
+}
+.c2-segment-btn + .c2-segment-btn { border-left: 1px solid var(--hxm-line-h); }
+.c2-segment-btn:hover { color: var(--hxm-ink-0); background: var(--hxm-bg-soft); }
+.c2-segment-btn.is-on { background: var(--c2-accent); color: var(--hxm-bg); font-weight: 600; }
+
+/* ============================ Dialog (self-contained) ===================== */
+/* The shared <Dialog> is a plain custom modal — NOT Carbon's ComposedModal.
+   Carbon's stock modal sizes as a viewport %, right-pads bare <p> 20%, and
+   stretches the footer button to flex 0 1 50% / 64px tall — which clipped our
+   note/list/form body and detached Cancel into a floating box. Overriding
+   those lost the specificity war twice, so we own the whole chrome here. All
+   colors come from the --hxm-* / --c2-* bridge (Carbon g100) — no hardcoded
+   hex — so it stays consistent with the rest of the C2 console. */
+
+/* Full-screen dim overlay that flex-centers the card. Sits above the masthead
+   (z-index 8000) and the user-menu/command-palette pops. */
+.c2-dlg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--c2-overlay, rgba(0, 0, 0, 0.66));
+  backdrop-filter: blur(2px);
+}
+
+/* The constrained card. `width` is set inline to min(<w>px, 100vw - 2rem);
+   height is capped to 85vh and the body scrolls inside. */
+.c2-dlg {
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  max-width: calc(100vw - 2rem);
+  min-width: 0;
+  background: var(--hxm-s1);
+  color: var(--hxm-ink-1);
+  border: 1px solid var(--hxm-line-h);
+  border-radius: var(--hxm-r-lg);
+  box-shadow: var(--hxm-sh-3);
+  overflow: hidden;
+  outline: none;
+}
+
+/* Header: title (left) + close ✕ (right), with a bottom border. */
+.c2-dlg-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--hxm-line);
+}
+.c2-dlg-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--hxm-ink-0);
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.c2-dlg-close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin: -4px -4px -4px 0;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--hxm-ink-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--hxm-r-md);
+  cursor: pointer;
+  transition: color 110ms var(--hxm-ease-out), background-color 110ms var(--hxm-ease-out);
+}
+.c2-dlg-close:hover { color: var(--hxm-ink-0); background: var(--hxm-s2); }
+.c2-dlg-close:focus-visible { outline: none; border-color: var(--c2-accent); color: var(--hxm-ink-0); }
+
+/* Body: scrollable, flex-column with gap so stacked notes/lists/forms breathe.
+   `min-width: 0` on descendants lets long mono strings wrap instead of
+   forcing horizontal overflow. */
+.c2-dlg-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.c2-dlg-body > * { min-width: 0; }
+.c2-dlg-body > p { margin: 0; }
+
+/* Footer: a normal left→right action bar with a top border — eyebrow +
+   spacer + actions on one compact row, right-aligned by default. */
+.c2-dlg-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--hxm-line);
+}
+.c2-dlg-footer .c2-toolbar-spacer { margin-left: auto; }
+
+/* ============================ Inline note / banner ======================= */
+.c2-note { padding: 12px 14px; border-radius: var(--hxm-r-md); font-size: 12.5px; border: 1px solid var(--hxm-line); }
+.c2-note-info { background: var(--c2-accent-lo); border-color: rgba(34,211,238,0.25); color: var(--hxm-ink-1); }
+.c2-note-warn { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.30); color: var(--hxm-ink-1); }
+.c2-note-danger { background: rgba(239,68,68,0.10); border-color: rgba(239,68,68,0.30); color: var(--hxm-ink-1); }
+.c2-note-mute { background: var(--hxm-bg-soft); color: var(--hxm-ink-2); }
+.c2-note-title { font-weight: 600; color: var(--hxm-ink-0); margin: 0 0 4px; }
+
+/* utility ink classes (legacy carry-over) */
+.c2-ink-0 { color: var(--hxm-ink-0); }
+.c2-ink-1 { color: var(--hxm-ink-1); }
+.c2-ink-2 { color: var(--hxm-ink-2); }
+.c2-ink-3 { color: var(--hxm-ink-3); }
+.c2-mono { font-family: var(--hxm-f-mono); }
+.c2-eyebrow { font-family: var(--hxm-f-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--hxm-ink-3); }
+.c2-spinner { display: inline-block; color: var(--hxm-ink-3); font-size: 12.5px; padding: 24px 0; text-align: center; width: 100%; }
+.c2-loading { padding: 28px 16px; text-align: center; color: var(--hxm-ink-3); font-size: 12.5px; }
+
+/* keyboard hint chip */
+.c2-kbd { display: inline-block; padding: 1px 5px; font-family: var(--hxm-f-mono); font-size: 10px; color: var(--hxm-ink-3); background: var(--hxm-s3); border: 1px solid var(--hxm-line); border-radius: 3px; }
+
+/* ============================ Sign-in (anonymous) ======================== */
+.c2-signin-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(34,211,238,0.10), transparent 70%),
+    var(--hxm-bg);
+  padding: 24px;
+}
+.c2-signin-card {
+  width: min(420px, 100%);
+  background: var(--hxm-s1);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-xl);
+  box-shadow: var(--hxm-sh-2);
+  padding: 32px 30px;
+  text-align: center;
+}
+.c2-signin-mark {
+  color: var(--hxm-ink-0);
+  margin-bottom: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.c2-signin-title { margin: 0 0 18px; font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; font-weight: 600; color: var(--hxm-ink-3); }
+.c2-signin-sub { margin: 0 0 24px; font-size: 12.5px; color: var(--hxm-ink-2); line-height: 1.55; }
+.c2-signin-card .c2-btn { width: 100%; height: 36px; }
+.c2-signin-foot { margin-top: 20px; font-size: 11px; color: var(--hxm-ink-3); font-family: var(--hxm-f-mono); letter-spacing: 0.05em; }
+
+/* ============================ Console (live) wrap ========================
+   The remote-console frame (SSH / RDP / SQL). A console page fills the full
+   viewport below the masthead with NO outer padding — the viewport (xterm /
+   canvas / grid) is the hero. Layout:
+
+     .c2-console            ← column flex, fills the shell content slot
+       .c2-console-toolbar  ← top chrome: target, status, session telem, actions
+       .c2-console-stage    ← the live viewport pane (relative, hosts overlays)
+       .c2-console-statusbar← thin bottom strip: ids, throughput, footnotes
+   ========================================================================== */
+.c2-console { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--hxm-bg); }
+
+/* Window modes (ConsoleFrame). The stage stays mounted in every mode so a
+   minimized/floating console keeps its live session connected. */
+.c2-console[data-mode="floating"] {
+  position: fixed; flex: none;
+  border: 1px solid var(--hxm-line-h); border-radius: var(--hxm-r-md);
+  box-shadow: 0 18px 50px rgba(0,0,0,.55); overflow: hidden; z-index: 40;
+}
+.c2-console[data-mode="floating"] .c2-console-toolbar { cursor: move; user-select: none; }
+.c2-console-resize {
+  position: absolute; right: 0; bottom: 0; width: 16px; height: 16px;
+  cursor: nwse-resize; z-index: 41;
+  background: linear-gradient(135deg, transparent 50%, var(--hxm-line-h) 50%, var(--hxm-line-h) 62%, transparent 62%, transparent 75%, var(--hxm-line-h) 75%);
+}
+/* Minimized → a compact pill docked bottom-left; the stage is hidden (not
+   unmounted), keeping the session alive until restored. */
+.c2-console[data-mode="minimized"] {
+  position: fixed; left: 16px; bottom: 16px; flex: none;
+  width: min(420px, calc(100vw - 32px)); height: auto;
+  border: 1px solid var(--hxm-line-h); border-radius: var(--hxm-r-md);
+  box-shadow: 0 12px 36px rgba(0,0,0,.5); overflow: hidden; z-index: 40;
+}
+.c2-console[data-mode="minimized"] .c2-console-stage,
+.c2-console[data-mode="minimized"] .c2-console-statusbar { display: none; }
+.c2-console-pill { cursor: default; }
+
+/* legacy padded console body (used by DBConsole + param-guard panels) */
+.c2-console-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 16px; gap: 12px; overflow: auto; }
+.c2-console-body.is-flush { padding: 0; gap: 0; overflow: hidden; }
+
+/* ---- console toolbar (top chrome) -------------------------------------- */
+.c2-console-toolbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 7px 16px;
+  /* Theme-aware surface (NOT --c2-masthead, which is forced dark in light mode):
+     in g100 this is identical to the masthead layer, but in g10 it becomes a
+     light surface so the toolbar's theme-aware ink (target, telemetry, ghost
+     buttons) stays legible instead of dark-on-dark. */
+  background: var(--hxm-s1);
+  border-bottom: 1px solid var(--hxm-line);
+}
+.c2-console-toolbar .c2-toolbar-spacer { margin-left: auto; }
+.c2-console-id {
+  display: flex; align-items: center; gap: 9px; min-width: 0;
+}
+.c2-console-proto {
+  display: inline-flex; align-items: center;
+  height: 18px; padding: 0 7px;
+  font-family: var(--hxm-f-mono); font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--c2-accent); background: var(--c2-accent-lo);
+  border: 1px solid rgba(34,211,238,0.30); border-radius: var(--hxm-r-sm);
+}
+.c2-console-target {
+  font-family: var(--hxm-f-mono); font-size: 13px; color: var(--hxm-ink-0);
+  font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* a discrete telemetry cell in the toolbar (duration, latency, bytes…) */
+.c2-console-telem {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  font-size: 11px; color: var(--hxm-ink-3);
+}
+.c2-console-telem b {
+  font-family: var(--hxm-f-mono); font-size: 12px; font-weight: 600;
+  color: var(--hxm-ink-1); font-variant-numeric: tabular-nums;
+}
+.c2-console-sep { width: 1px; height: 18px; background: var(--hxm-line-h); flex: 0 0 auto; }
+
+/* ---- stage (the live viewport pane) ------------------------------------ */
+.c2-console-stage {
+  position: relative;
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  background: var(--c2-terminal-bg);
+  overflow: hidden;
+}
+/* the xterm host fills the stage with a small inset gutter */
+.c2-console-stage .c2-terminal {
+  flex: 1; min-height: 0; border: none; border-radius: 0; padding: 10px 12px;
+  background: var(--c2-terminal-bg);
+}
+/* canvas-bearing stage centres the desktop and lets it scale to fit. The mat
+   (letterbox) is theme-aware chrome — black in dark mode, a soft Carbon surface
+   in light mode — so an unscaled / not-yet-connected desktop doesn't sit in a
+   black void in the light theme. The desktop pixels themselves stay #000. */
+.c2-console-stage.is-canvas {
+  align-items: center; justify-content: center;
+  padding: 12px; background: var(--c2-desktop-mat, #000);
+}
+/* live RDP canvas — backing store is the exact desktop pixel size (set from
+   DESKTOP_SIZE); CSS scales it to fit the stage while keeping aspect ratio.
+   Backing stays #000: it's a remote Windows desktop, not app chrome. */
+.c2-rdp-canvas {
+  display: block;
+  max-width: 100%; max-height: 100%;
+  width: auto; height: auto;
+  background: #000;
+  outline: none;
+  /* Normal arrow pointer over the remote desktop (was crosshair, which reads as
+     a precision/drawing cursor). The remote cursor isn't composited into the
+     frame, so a default local pointer is what the operator navigates with. */
+  cursor: default;
+  image-rendering: pixelated; /* crisp 1:1 blits when not scaled */
+  box-shadow: 0 0 0 1px var(--hxm-line);
+  transition: box-shadow 0.15s ease;
+}
+.c2-rdp-canvas:focus-visible { box-shadow: 0 0 0 2px var(--c2-accent); }
+
+/* ---- terminal pane (standalone, e.g. inside legacy padded body) -------- */
+.c2-terminal {
+  flex: 1; min-height: 0;
+  background: var(--c2-terminal-bg);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-md);
+  padding: 10px;
+  font-family: var(--hxm-f-mono);
+}
+
+/* ---- stage overlay (connecting / closed / error) ----------------------- */
+.c2-console-overlay {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px;
+  background: var(--c2-overlay);
+  backdrop-filter: blur(2px);
+  text-align: center;
+}
+.c2-console-overlay-icon {
+  width: 46px; height: 46px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 22px; border-radius: 50%;
+  border: 1px solid var(--hxm-line-h); background: var(--hxm-s1);
+}
+.c2-console-overlay-icon.is-warn { color: var(--c2-warn); border-color: rgba(245,158,11,0.35); }
+.c2-console-overlay-icon.is-danger { color: var(--c2-danger); border-color: rgba(239,68,68,0.35); }
+.c2-console-overlay-icon.is-mute { color: var(--hxm-ink-2); }
+.c2-console-overlay-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--hxm-ink-0); }
+.c2-console-overlay-msg {
+  margin: 0; max-width: 440px; font-size: 12.5px; line-height: 1.55; color: var(--hxm-ink-2);
+}
+.c2-console-overlay-msg.c2-mono { font-size: 12px; word-break: break-word; }
+.c2-console-overlay-actions { display: flex; gap: 8px; margin-top: 4px; }
+/* small connecting spinner (CSS-only, respects reduced-motion) */
+.c2-console-spin {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 2px solid var(--hxm-line-h); border-top-color: var(--c2-accent);
+  animation: c2-spin 0.8s linear infinite;
+}
+@keyframes c2-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .c2-console-spin { animation: none; } }
+
+/* ---- status bar (thin bottom strip) ------------------------------------ */
+.c2-console-statusbar {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  min-height: 30px; padding: 4px 16px;
+  /* theme-aware surface — see .c2-console-toolbar (legible in light mode) */
+  background: var(--hxm-s1);
+  border-top: 1px solid var(--hxm-line);
+  font-size: 11px; color: var(--hxm-ink-3);
+}
+.c2-console-statusbar .c2-toolbar-spacer { margin-left: auto; }
+.c2-console-stat { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.c2-console-stat .c2-eyebrow { font-size: 9.5px; }
+.c2-console-stat b {
+  font-family: var(--hxm-f-mono); color: var(--hxm-ink-1); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* legacy padded console strip (DBConsole header/footer + param guards) */
+.c2-console-strip {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 12px; background: var(--hxm-s1);
+  border: 1px solid var(--hxm-line); border-radius: var(--hxm-r-md);
+  font-size: 12px;
+}
+.c2-console-strip .c2-toolbar-spacer { margin-left: auto; }
+
+/* ---- catalog per-target recording toggle (admin) ----------------------- */
+.c2-rec-cell { display: inline-flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+.c2-rec-toggle {
+  position: relative; width: 34px; height: 18px; flex: 0 0 auto;
+  padding: 0; border: 1px solid var(--hxm-line-h); border-radius: 999px;
+  background: var(--hxm-s3); cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease;
+}
+.c2-rec-toggle:focus-visible { outline: 2px solid var(--c2-accent); outline-offset: 1px; }
+.c2-rec-toggle.is-on { background: var(--c2-online); border-color: var(--c2-online); }
+.c2-rec-knob {
+  position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; transition: transform 0.15s ease;
+}
+.c2-rec-toggle.is-on .c2-rec-knob { transform: translateX(16px); }
+.c2-rec-src { font-size: 9.5px; color: var(--hxm-ink-3); white-space: nowrap; }
+.c2-linkbtn {
+  background: none; border: none; padding: 0; font: inherit; cursor: pointer;
+  color: var(--c2-accent); text-decoration: underline;
+}
+.c2-linkbtn:hover { color: var(--c2-accent-hi); }
+
+/* ---- recording / replay player ----------------------------------------- */
+/* two-column playback layout: player (main) + metadata/seal (side) */
+.c2-rec-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.c2-rec-main { min-width: 0; }
+.c2-rec-side { display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 980px) { .c2-rec-layout { grid-template-columns: 1fr; } }
+.c2-rec-player {
+  min-height: 360px;
+  background: var(--c2-terminal-bg);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-md);
+  overflow: hidden;
+}
+/* replay canvas stage — centred desktop with player controls above */
+.c2-replay {
+  display: flex; flex-direction: column; gap: 0;
+  background: var(--c2-desktop-mat, #000);
+  border: 1px solid var(--hxm-line); border-radius: var(--hxm-r-md);
+  overflow: hidden;
+}
+.c2-replay-controls {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px;
+  /* theme-aware surface — see .c2-console-toolbar (legible in light mode) */
+  background: var(--hxm-s1); border-bottom: 1px solid var(--hxm-line);
+}
+.c2-replay-controls .c2-toolbar-spacer { margin-left: auto; }
+.c2-replay-scrubber { font-family: var(--hxm-f-mono); font-size: 11px; color: var(--hxm-ink-3); }
+.c2-replay-stage {
+  /* letterbox chrome around the replayed desktop — theme-aware mat */
+  display: flex; align-items: center; justify-content: center;
+  padding: 12px; min-height: 320px; background: var(--c2-desktop-mat, #000);
+}
+.c2-replay-canvas {
+  /* the recorded desktop pixels — stays #000 backing */
+  display: block; max-width: 100%; height: auto;
+  background: #000; image-rendering: pixelated;
+}
+
+/* ---- Admin request batch bar (fanned-out multi-target decisions) ------- */
+.c2-batch-bar {
+  border-bottom: 1px solid var(--hxm-line);
+  background: var(--hxm-bg-soft);
+}
+.c2-batch-bar-head {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 8px 14px 4px;
+}
+.c2-batch-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 8px 14px;
+  border-top: 1px solid var(--hxm-line);
+}
+.c2-batch-row:first-of-type { border-top: 1px solid var(--hxm-line); }
+.c2-batch-row-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; flex: 1; font-size: 12.5px; }
+.c2-batch-row-actions { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+
+/* ---- SQL console stage (editor + result grid) -------------------------- */
+.c2-sql-stage {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px 16px; overflow: auto;
+  background: var(--hxm-bg);
+}
+/* result panel grows to fill remaining height; its grid scrolls inside */
+.c2-sql-result { flex: 1; min-height: 200px; display: flex; flex-direction: column; }
+.c2-sql-result .c2-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.c2-sql-grid-wrap { flex: 1; min-height: 0; overflow: auto; }
+.c2-sql-grid-wrap .c2-grid td { white-space: pre-wrap; max-width: 480px; overflow-wrap: anywhere; vertical-align: top; }
+
+/* ---- copy chip --------------------------------------------------------- */
+.c2-copy-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 8px; font: inherit; font-size: 11.5px; font-family: var(--hxm-f-mono);
+  background: var(--hxm-s3); color: var(--hxm-ink-1);
+  border: 1px solid var(--hxm-line); border-radius: var(--hxm-r-sm);
+  cursor: pointer; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.c2-copy-chip:hover { border-color: var(--hxm-line-h); }
+.c2-copy-chip:focus-visible { outline: none; border-color: var(--c2-accent); }
+.c2-copy-state { color: var(--hxm-ink-3); font-size: 11px; }
+
+/* ============================ Responsive ================================== */
+@media (max-width: 880px) {
+  .c2-shell { grid-template-columns: var(--c2-rail-w-collapsed) 1fr; }
+  .c2-shell .c2-rail-item { justify-content: center; padding: 9px 0; gap: 0; }
+  .c2-shell .c2-rail-item-label,
+  .c2-shell .c2-rail-item-count,
+  .c2-shell .c2-rail-item-caret,
+  .c2-shell .c2-rail-sub,
+  .c2-shell .c2-rail-section-label { display: none; }
+  .c2-masthead-search { max-width: none; }
+  .c2-kpi-row { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+}
+@media (max-width: 600px) {
+  .c2-masthead-search .c2-kbd-hint { display: none; }
+  .c2-page-body { padding: 14px 12px 0; }
+  .c2-page-header { padding: 10px 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ====================== Cross-nav console dock =========================== */
+/* The dock host lifts a live console out of its route (rendered at app root,
+   outside <Routes>) so its WebSocket survives navigation. The FOREGROUND
+   session covers the page below the masthead; backgrounded sessions are
+   display:none (mounted, still connected). The session tray is the cross-nav
+   restore/switch surface, visible while any session is live.
+
+   z-index MUST clear the Carbon UI Shell. The masthead (.c2-shell-masthead)
+   and the SideNav rail sit at z-index 8000; at the old z-index:900 the rail +
+   masthead painted OVER the console, so only the remote desktop peeked through
+   the content gap and the console's own toolbar was hidden behind the masthead
+   (the "broken RDP" report). Seat the host just BELOW the masthead (top =
+   masthead height) and ABOVE the shell (8500) so it's a clean full console
+   under the app bar — and below the command palette / user menu (9000) so
+   Cmd-K still pops over it. */
+.c2-dock-host {
+  position: fixed;
+  top: var(--c2-masthead-h);
+  left: 0; right: 0; bottom: 0;
+  z-index: 8500;
+  display: flex;
+  flex-direction: column;
+  background: var(--hxm-bg);
+}
+/* The hosted ConsoleFrame fills the host (docked mode); floating mode keeps its
+   own fixed positioning and is unaffected. */
+.c2-dock-host > .c2-console[data-mode='docked'] { flex: 1; min-height: 0; }
+
+/* Session tray — a compact dock of backgrounded live sessions. Floats above
+   the host AND the masthead/rail (8000) so it's reachable both when a console
+   is foreground and when minimized over a normal page. */
+.c2-dock-taskbar {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 8600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 7px 10px;
+  background: var(--hxm-s2);
+  border: 1px solid var(--hxm-line-h);
+  border-radius: var(--hxm-r-lg);
+  box-shadow: var(--hxm-sh-3);
+  overflow-x: auto;
+}
+.c2-dock-taskbar-label {
+  flex: 0 0 auto;
+  font-family: var(--hxm-f-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hxm-ink-3);
+  padding-right: 2px;
+}
+
+.c2-dock-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--hxm-s3);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-md);
+  overflow: hidden;
+  transition: border-color 120ms var(--hxm-ease-out), background 120ms var(--hxm-ease-out);
+}
+.c2-dock-pill:hover { border-color: var(--hxm-line-h); }
+.c2-dock-pill.is-active {
+  border-color: var(--c2-accent);
+  background: var(--c2-accent-lo);
+}
+
+.c2-dock-pill-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  font: inherit;
+  background: transparent;
+  border: 0;
+  color: var(--hxm-ink-1);
+  cursor: pointer;
+}
+.c2-dock-pill-main:focus-visible { outline: 2px solid var(--c2-accent); outline-offset: -2px; }
+.c2-dock-pill-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--c2-online);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c2-online) 22%, transparent);
+}
+.c2-dock-pill-proto {
+  font-family: var(--hxm-f-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--hxm-ink-3);
+}
+.c2-dock-pill.is-active .c2-dock-pill-proto { color: var(--c2-accent); }
+.c2-dock-pill-title {
+  font-size: 12.5px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.c2-dock-pill-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--hxm-line);
+  color: var(--hxm-ink-3);
+  cursor: pointer;
+}
+.c2-dock-pill-x:hover { color: var(--c2-danger); background: color-mix(in srgb, var(--c2-danger) 12%, transparent); }
+.c2-dock-pill-x:focus-visible { outline: 2px solid var(--c2-danger); outline-offset: -2px; }
+
+/* ===================== Mobile / tablet / touch =========================== */
+/* The console (SSH/RDP/SQL) is fully usable on a phone or tablet — we do NOT
+   gate it behind a "use a PC" notice. Instead the chrome adapts and touch
+   drives the remote desktop directly. */
+
+/* THE key touch fix: the live RDP canvas must OWN touch gestures. Without this
+   the browser treats a finger-drag as page scroll/zoom and never delivers the
+   pointerdown/move/up that move the remote cursor. touch-action:none routes
+   every touch straight to the canvas as a pointer event → finger = remote
+   mouse. Pinch-zoom on the surface is intentionally given up (it's a remote
+   machine, not a document — use the Session-settings resolution instead). */
+.c2-rdp-canvas { touch-action: none; }
+
+/* Coarse pointers (phones/tablets), any width: WCAG 2.5.5 / HIG hit targets so
+   the toolbar + dock controls are thumb-tappable, not 28px icon buttons. */
+@media (pointer: coarse) {
+  .c2-console-toolbar button,
+  .c2-dock-pill-main { min-height: 40px; }
+  .c2-dock-pill-x { min-width: 40px; min-height: 40px; }
+}
+
+/* Phone-width consoles: let the toolbar WRAP instead of overflowing its
+   controls off-screen, shed the verbose telemetry (desktop size / frame count
+   / requested-size label) while KEEPING the recording indicator (a compliance
+   signal) and every action button, and truncate the target id so it can't
+   shove the buttons away. */
+@media (max-width: 640px) {
+  .c2-console-toolbar { flex-wrap: wrap; row-gap: 6px; padding: 8px 10px; }
+  .c2-console-telem { display: none; }
+  .c2-console-target { max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .c2-console-statusbar { flex-wrap: wrap; row-gap: 4px; }
+  .c2-console-stage.is-canvas { padding: 4px; }
+
+  /* Session tray → a full-width bottom bar (thumb-reachable) instead of a
+     floating bottom-right chip that can run off a narrow screen. */
+  .c2-dock-taskbar {
+    left: 0; right: 0; bottom: 0;
+    max-width: none;
+    border-radius: 0;
+    border-left: 0; border-right: 0; border-bottom: 0;
+  }
+  .c2-dock-pill-title { max-width: 44vw; }
+}
+
+/* Very narrow (small phones): collapse the masthead search to just its icon so
+   the brand + global actions (theme / alerts / avatar) still fit on one row. */
+@media (max-width: 480px) {
+  .c2-masthead-search {
+    flex: 0 0 auto;
+    width: 36px; max-width: none;
+    padding: 0;
+    justify-content: center;
+  }
+  .c2-masthead-search > span { display: none; }
+}

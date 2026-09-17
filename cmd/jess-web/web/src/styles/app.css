@@ -1,0 +1,693 @@
+/* ============================================================================
+   jess-web — application styles
+   Built on hxm tokens (src/styles/tokens.css). Never hardcode hex — always
+   reference --hxm-* vars. Sentence case everywhere except .jw-mono-eyebrow.
+   One italic-serif word per display heading.
+   ============================================================================ */
+
+/* ---- topbar -------------------------------------------------------------- */
+.jw-topbar {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--hxm-bg);
+  border-bottom: 1px solid var(--hxm-line);
+}
+.jw-topbar-thin .jw-topbar-inner { padding: 10px 24px; }
+.jw-topbar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 18px;
+}
+.jw-brand {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--hxm-ink-0); text-decoration: none;
+  font-weight: 600; letter-spacing: -0.01em;
+}
+.jw-brand:hover { text-decoration: none; }
+.jw-brand-mark {
+  width: 18px; height: 18px; border-radius: var(--hxm-r-sm);
+  background: var(--hxm-blue);
+  box-shadow: 0 0 0 3px var(--hxm-blue-lo);
+}
+.jw-brand-name { font-size: 17px; }
+.jw-brand-tag {
+  font-family: var(--hxm-f-mono);
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--hxm-ink-2);
+  padding: 2px 6px; border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-sm);
+}
+.jw-topnav {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 12px;
+  font-size: 13px;
+}
+.jw-session-meta {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px;
+}
+.jw-session-meta + .jw-btn-ghost { margin-left: 12px; }
+
+/* ---- main + hero --------------------------------------------------------- */
+.jw-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 64px 24px 96px;
+  display: flex; flex-direction: column; gap: 32px;
+}
+.jw-hero {
+  display: flex; flex-direction: column; gap: 12px;
+  max-width: 720px;
+}
+.jw-display {
+  font-size: clamp(34px, 5vw, 48px);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  margin: 0;
+}
+.jw-italic-word {
+  font-family: var(--hxm-f-serif);
+  font-weight: 400;
+  font-style: italic;
+  color: var(--hxm-blue);
+}
+.jw-sub {
+  margin: 0;
+  font-size: 16px;
+  color: var(--hxm-ink-2);
+  max-width: 60ch;
+}
+.jw-mono-eyebrow {
+  font-family: var(--hxm-f-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hxm-ink-2);
+}
+.jw-ink-1 { color: var(--hxm-ink-1); }
+.jw-ink-2 { color: var(--hxm-ink-2); }
+.jw-ink-3 { color: var(--hxm-ink-3); }
+.jw-margin-top { margin-top: 12px; }
+
+/* ---- cards --------------------------------------------------------------- */
+.jw-card {
+  background: var(--hxm-s1);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-lg);
+  padding: 24px 28px;
+}
+.jw-card-section .jw-card-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.jw-card-title {
+  margin: 0;
+  font-size: 17px; font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--hxm-ink-0);
+}
+.jw-card-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--hxm-ink-2);
+}
+.jw-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 768px) {
+  .jw-grid-2 { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---- status card (operator cert) ---------------------------------------- */
+.jw-status {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  margin: 14px 0 0;
+  font-size: 13.5px;
+}
+.jw-status dt { color: var(--hxm-ink-2); font-weight: 500; }
+.jw-status dd { margin: 0; color: var(--hxm-ink-0); }
+
+/* ---- pills + buttons ----------------------------------------------------- */
+.jw-pill {
+  display: inline-flex; align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--hxm-r-pill);
+  font-size: 12px; font-weight: 500;
+  border: 1px solid transparent;
+}
+.jw-pill-mute   { background: var(--hxm-s2); color: var(--hxm-ink-2); }
+.jw-pill-ok     { background: rgba(54, 178, 113, 0.10); color: var(--hxm-ok); }
+.jw-pill-warn   { background: rgba(245, 158, 11, 0.10); color: var(--hxm-warn); }
+.jw-pill-danger { background: rgba(230, 69, 86, 0.10); color: var(--hxm-danger); }
+
+.jw-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  font: inherit; font-size: 13.5px; font-weight: 500;
+  border-radius: var(--hxm-r-pill);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 120ms ease-out, transform 80ms ease-out;
+}
+.jw-btn:active { transform: translateY(1px); }
+.jw-btn-ghost {
+  background: transparent;
+  color: var(--hxm-ink-1);
+  border-color: var(--hxm-line-h);
+}
+.jw-btn-ghost:hover {
+  background: var(--hxm-s2);
+  color: var(--hxm-ink-0);
+  text-decoration: none;
+}
+.jw-btn-brand {
+  background: var(--hxm-blue);
+  color: var(--hxm-blue-ink);
+  box-shadow: var(--hxm-sh-blue);
+}
+.jw-btn-brand:hover {
+  background: var(--hxm-blue-hi);
+  text-decoration: none;
+}
+
+/* ---- form (connect: target + grant) ------------------------------------- */
+.jw-form {
+  display: flex; flex-direction: column; gap: 12px;
+  max-width: 520px;
+}
+.jw-field {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.jw-field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--hxm-ink-2);
+  letter-spacing: -0.01em;
+}
+.jw-field input[type="text"] {
+  height: 36px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 14px;
+  font-family: var(--hxm-f-mono);
+  background: var(--hxm-bg);
+  color: var(--hxm-ink-0);
+  border: 1px solid var(--hxm-line-h);
+  border-radius: var(--hxm-r-sm);
+  outline: none;
+  transition: box-shadow 120ms ease-out, border-color 120ms ease-out;
+}
+.jw-field input[type="text"]:focus {
+  border-color: var(--hxm-blue);
+  box-shadow: 0 0 0 3px var(--hxm-blue-lo);
+}
+.jw-field input[type="text"]::placeholder { color: var(--hxm-ink-3); }
+.jw-form .jw-btn-brand { align-self: flex-start; margin-top: 4px; }
+
+/* ---- empty + status messages -------------------------------------------- */
+.jw-empty {
+  background: var(--hxm-bg-soft);
+  border: 1px dashed var(--hxm-line-h);
+  border-radius: var(--hxm-r-md);
+  padding: 28px;
+  text-align: center;
+}
+.jw-empty-title {
+  margin: 0 0 8px;
+  font-weight: 600;
+  color: var(--hxm-ink-1);
+}
+.jw-empty-body {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--hxm-ink-2);
+}
+.jw-empty-body code {
+  background: var(--hxm-s2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ---- footer -------------------------------------------------------------- */
+.jw-footer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--hxm-line);
+  font-size: 12px;
+}
+
+/* ---- activity list (operator self-service "my requests") ---------------- */
+.jw-activity-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.jw-activity-row {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content max-content;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--hxm-bg-soft);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-sm);
+  font-size: 13px;
+}
+.jw-activity-when {
+  font-size: 12px;
+  text-align: right;
+}
+.jw-activity-grant {
+  font-size: 12px;
+  padding-left: 8px;
+  border-left: 1px solid var(--hxm-line);
+}
+.jw-expiry-ok    { color: var(--hxm-ok); }
+.jw-expiry-past  { color: var(--hxm-danger); }
+
+/* Cross-link flash: clicking the grant ↗ in Recent sessions sets the
+   URL hash; the matching ActivityList row (id="grant-<id>") flashes
+   for ~2s so the operator's eye can find it. Hxm blue ring drawn via
+   box-shadow so it overlaps neighbouring rows without affecting
+   layout. */
+.jw-activity-row:target {
+  animation: jw-row-flash 2s var(--hxm-ease-out) 1 both;
+}
+@keyframes jw-row-flash {
+  0%   { box-shadow: 0 0 0 0 var(--hxm-blue-lo); border-color: var(--hxm-blue); }
+  50%  { box-shadow: 0 0 0 6px var(--hxm-blue-lo); border-color: var(--hxm-blue); }
+  100% { box-shadow: 0 0 0 0 transparent; border-color: var(--hxm-line); }
+}
+@media (max-width: 520px) {
+  .jw-activity-row {
+    grid-template-columns: max-content 1fr;
+    row-gap: 4px;
+  }
+  .jw-activity-when, .jw-activity-grant {
+    grid-column: 2;
+    text-align: left;
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
+/* ---- admin panel -------------------------------------------------------- */
+.jw-admin-tabs {
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+.jw-tab {
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--hxm-ink-2);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-pill);
+  cursor: pointer;
+}
+.jw-tab:hover { background: var(--hxm-s2); color: var(--hxm-ink-0); }
+.jw-tab-active {
+  background: var(--hxm-blue);
+  color: var(--hxm-blue-ink);
+  border-color: var(--hxm-blue);
+}
+.jw-tab-active:hover { background: var(--hxm-blue-hi); color: var(--hxm-blue-ink); }
+.jw-admin-rows {
+  list-style: none; margin: 16px 0 0; padding: 0;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.jw-admin-row {
+  background: var(--hxm-bg-soft);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-md);
+  padding: 12px 16px;
+}
+.jw-admin-row-head {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px;
+}
+.jw-admin-row-actions {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.jw-admin-row-actions input[type="text"], .jw-admin-row-actions input[type="number"] {
+  padding: 4px 8px;
+  font: inherit; font-size: 13px;
+  background: var(--hxm-bg);
+  color: var(--hxm-ink-0);
+  border: 1px solid var(--hxm-line-h);
+  border-radius: var(--hxm-r-sm);
+}
+
+/* ---- command palette (Cmd+K) -------------------------------------------- */
+.jw-cmdk-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 12vh;
+  z-index: 1000;
+  animation: jw-fade-in 140ms ease-out;
+}
+.jw-cmdk {
+  width: min(640px, calc(100vw - 32px));
+  background: var(--hxm-s1);
+  border: 1px solid var(--hxm-line-h);
+  border-radius: var(--hxm-r-lg);
+  box-shadow: var(--hxm-sh-3);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.jw-cmdk-input {
+  font: inherit; font-size: 15px;
+  padding: 14px 18px;
+  background: transparent;
+  color: var(--hxm-ink-0);
+  border: none;
+  border-bottom: 1px solid var(--hxm-line);
+  outline: none;
+}
+.jw-cmdk-input::placeholder { color: var(--hxm-ink-3); }
+.jw-cmdk-list {
+  list-style: none; margin: 0; padding: 6px;
+  max-height: 50vh; overflow-y: auto;
+}
+.jw-cmdk-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  color: var(--hxm-ink-1);
+  border-radius: var(--hxm-r-sm);
+  cursor: pointer;
+}
+.jw-cmdk-item-active {
+  background: var(--hxm-blue-lo);
+  color: var(--hxm-ink-0);
+}
+.jw-cmdk-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--hxm-ink-3);
+  font-size: 13px;
+}
+.jw-cmdk-footer {
+  display: flex; gap: 16px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--hxm-line);
+  color: var(--hxm-ink-3);
+  font-size: 11px;
+}
+.jw-cmdk-footer kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-right: 4px;
+  font: inherit;
+  font-family: var(--hxm-f-mono);
+  font-size: 10px;
+  background: var(--hxm-s2);
+  border: 1px solid var(--hxm-line);
+  border-radius: 4px;
+}
+@keyframes jw-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---- theme toggle (Phase 5e-12) ----------------------------------------- */
+.jw-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; height: 30px;
+  margin-left: 4px;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  background: transparent;
+  color: var(--hxm-ink-2);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-sm);
+  cursor: pointer;
+  transition: color 120ms ease-out, background-color 120ms ease-out, border-color 120ms ease-out;
+}
+.jw-theme-toggle:hover {
+  color: var(--hxm-ink-0);
+  background: var(--hxm-s2);
+  border-color: var(--hxm-line-h);
+}
+.jw-theme-toggle:focus-visible {
+  outline: none;
+  border-color: var(--hxm-blue);
+  box-shadow: 0 0 0 3px var(--hxm-blue-lo);
+}
+
+/* ---- session_meta row + copy chip (Phase 5e-8) -------------------------- */
+.jw-meta-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 16px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.jw-copy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 11.5px;
+  background: var(--hxm-s2);
+  color: var(--hxm-ink-1);
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-sm);
+  cursor: pointer;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out;
+}
+.jw-copy-chip:hover {
+  background: var(--hxm-s3);
+  border-color: var(--hxm-line-h);
+}
+.jw-copy-chip:focus-visible {
+  outline: none;
+  border-color: var(--hxm-blue);
+  box-shadow: 0 0 0 3px var(--hxm-blue-lo);
+}
+.jw-copy-state {
+  color: var(--hxm-ink-3);
+  font-size: 11px;
+}
+.jw-meta-link {
+  padding: 2px 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+/* ---- recording dot (live indicator) ------------------------------------- */
+.jw-recording {
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.jw-dot {
+  width: 8px; height: 8px;
+  border-radius: var(--hxm-r-pill);
+  display: inline-block;
+}
+.jw-dot-live {
+  background: var(--hxm-ok);
+  box-shadow: 0 0 0 0 rgba(31, 182, 122, 0.40);
+  animation: jw-pulse 1.4s ease-out infinite;
+}
+.jw-dot-stopped {
+  background: var(--hxm-ink-3);
+}
+@keyframes jw-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(31, 182, 122, 0.40); }
+  70%  { box-shadow: 0 0 0 8px rgba(31, 182, 122, 0);    }
+  100% { box-shadow: 0 0 0 0 rgba(31, 182, 122, 0);      }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jw-dot-live { animation: none; }
+}
+
+/* ---- session page layout ------------------------------------------------- */
+.jw-session-body {
+  display: flex; flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--hxm-bg);
+}
+.jw-session-main {
+  flex: 1; min-height: 0;
+  padding: 12px;
+  display: flex;
+}
+.jw-terminal {
+  flex: 1; min-height: 0;
+  background: #0A0E14;
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-md);
+  padding: 12px;
+  font-family: var(--hxm-f-mono);
+}
+.jw-session-footer {
+  padding: 8px 24px;
+  border-top: 1px solid var(--hxm-line);
+  display: flex; align-items: center; gap: 12px;
+  font-size: 12px;
+  background: var(--hxm-bg-soft);
+}
+
+/* ---- asciinema-player wrapper ------------------------------------------ */
+.jw-rec-player {
+  margin-top: 12px;
+  min-height: 360px;
+  background: #0A0E14; /* match terminal background so player borders look intentional */
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-md);
+  overflow: hidden;
+}
+
+/* ---- prefers-reduced-motion --------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---- mobile + narrow viewport polish ------------------------------------
+   Phone-size operators get a tighter layout. Topbar wraps to two rows
+   when there's not enough horizontal room (Operator email is the most
+   likely overflow culprit). Main padding tightens to give content more
+   room. Hero scales down. Cards lose their generous side-padding.
+   --------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .jw-topbar-inner {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .jw-brand-tag { display: none; } /* "ops broker" tag drops on phone */
+  .jw-topnav, .jw-session-meta {
+    margin-left: 0;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .jw-main {
+    padding: 32px 14px 64px;
+    gap: 20px;
+  }
+  .jw-hero {
+    gap: 8px;
+  }
+  .jw-display {
+    /* clamp() already responsive, but the floor was 34px which is
+       still big on a 360px screen. Override the floor down to 28px. */
+    font-size: clamp(26px, 7vw, 34px);
+  }
+  .jw-card {
+    padding: 18px 16px;
+    border-radius: var(--hxm-r-md);
+  }
+  .jw-card-section .jw-card-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .jw-form {
+    /* full-width on phone so the inputs aren't artificially narrow */
+    max-width: none;
+  }
+  .jw-grid-2 {
+    /* already collapsed to 1fr below 768px via the existing rule;
+       just tighten the gap on phone */
+    gap: 14px;
+  }
+  .jw-footer {
+    padding: 16px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  /* Admin panel tabs — let them wrap rather than overflow */
+  .jw-admin-tabs { flex-wrap: wrap; }
+  .jw-admin-row-actions input[type="text"] { min-width: 0; flex: 1 1 100%; }
+  /* Session viewport — chrome eats vertical space on phones; reclaim */
+  .jw-session-main { padding: 6px; }
+  /* Command palette — fill the viewport on phone, drop the top offset */
+  .jw-cmdk-backdrop { padding-top: 4vh; }
+  .jw-cmdk { width: calc(100vw - 16px); }
+  /* Meta row wraps so session_id chip doesn't push the recording link
+     off the right edge */
+  .jw-meta-row { flex-wrap: wrap; row-gap: 6px; margin-left: 0; }
+}
+
+/* Larger touch targets on coarse pointers (phones, tablets) regardless
+   of viewport width. The 30x30 theme toggle is borderline; coarse
+   pointers need 44x44 to satisfy WCAG 2.5.5 / Apple HIG. */
+@media (pointer: coarse) {
+  .jw-theme-toggle { width: 36px; height: 36px; font-size: 16px; }
+  .jw-btn { padding: 10px 16px; } /* taller hit targets */
+  .jw-copy-chip { padding: 6px 10px; font-size: 12px; }
+}
+
+/* --- Live RDP canvas (ADR 0051 P2c "first pixels in the browser") --- */
+.jw-rdp-host {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+.jw-rdp-canvas {
+  /* Backing store is the exact desktop pixel size (set from DESKTOP_SIZE);
+     CSS scales it to fit the card while keeping the aspect ratio. */
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: #000;
+  border: 1px solid var(--hxm-line);
+  border-radius: var(--hxm-r-md);
+  outline: none;
+  cursor: crosshair;
+  /* The canvas must be focusable + capture keyboard; show focus subtly. */
+  box-shadow: 0 0 0 0 transparent;
+  transition: box-shadow 0.15s ease;
+  /* Crisp 1:1 blits when not scaled. */
+  image-rendering: pixelated;
+}
+.jw-rdp-canvas:focus-visible {
+  box-shadow: 0 0 0 2px var(--hxm-brand, #4f7cff);
+}
+.jw-rdp-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 12px;
+}
+.jw-rdp-target {
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  color: var(--hxm-ink-2);
+}

@@ -1,0 +1,44 @@
+# Exclusions for the Jess Docker build context. Keep the BuildKit
+# transfer + Go COPY phase fast and reproducible. The frontend stage
+# (FROM node:22-bookworm) declares its OWN explicit COPY paths under
+# cmd/jess-web/web/ — none of these matter for it. The Go stage's
+# `COPY . .` is what the rules below tame.
+
+# Already produced by the in-image frontend stage; the Go stage's
+# `COPY --from=frontend /web/dist` overwrites it anyway. Keep it out
+# of the COPY . . transfer so a stale local dist/ never substitutes
+# for the freshly-built one.
+cmd/jess-web/web/dist/*
+!cmd/jess-web/web/dist/.gitkeep
+cmd/jess-web/web/node_modules/
+cmd/jess-web/web/*.tsbuildinfo
+cmd/jess-web/web/.vite/
+
+# Tests + tooling not needed for the image
+**/*_test.go
+**/testdata/
+
+# Editor / OS / local notes
+.DS_Store
+*.swp
+.idea/
+.vscode/
+*.local
+*.local.*
+
+# VCS / CI metadata
+.git/
+.gitlab-ci.yml
+.gitignore
+
+# Rust (Phase 5f scaffold; not in the Go-only image yet)
+rust/**/target/
+# The root Dockerfile's session_live stage builds from
+# services/ironrdp-broker/crates source; the cargo target/ tree is
+# stage-internal and large — keep it out of the BuildKit context transfer.
+services/ironrdp-broker/target/
+
+# Misc
+**/*.md
+README*
+docs/

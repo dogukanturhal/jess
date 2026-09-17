@@ -1,0 +1,34 @@
+# broker-bin — Axum HTTP/WebSocket server. Thin orchestration on top
+# of proxy-core; keeps the testable framing logic out of main.rs.
+[package]
+name = "jess-ironrdp-broker"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "jess-ironrdp-broker"
+path = "src/main.rs"
+
+[dependencies]
+jess-ironrdp-proxy-core = { path = "../proxy-core" }
+
+axum = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+
+jsonwebtoken = { workspace = true }
+reqwest = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+time = { workspace = true }
