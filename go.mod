@@ -30,7 +30,7 @@ require (
 	github.com/minio/minio-go/v7 v7.2.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/quic-go/quic-go v0.60.0
-	github.com/quic-go/webtransport-go v0.11.0
+	github.com/quic-go/webtransport-go v0.11.1
 	github.com/spiffe/go-spiffe/v2 v2.7.0
 	golang.org/x/crypto v0.56.0
 	golang.org/x/oauth2 v0.36.0
