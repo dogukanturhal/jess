@@ -19,7 +19,7 @@ x-jess: &jess
 
 services:
   vault:
-    image: hashicorp/vault:1.18
+    image: hashicorp/vault:2.2
     command: ["server", "-dev", "-dev-root-token-id=root", "-dev-listen-address=0.0.0.0:8200"]
     environment:
       VAULT_ADDR: http://127.0.0.1:8200
