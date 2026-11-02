@@ -17,7 +17,7 @@ go 1.26.10
 // not a Go dependency; Go ↔ Rust over a local UDS/gRPC.
 
 require (
-	github.com/coreos/go-oidc/v3 v3.18.0
+	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/digitorus/timestamp v0.0.0-20250524132541-c45532741eea
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-ldap/ldap/v3 v3.4.13
