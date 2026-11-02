@@ -15,7 +15,7 @@
 # first, so it takes a while on a cold cache. The demo target skips both.
 
 # ----- Frontend: Vite SPA into /web/dist ------------------------------------
-FROM node:22-bookworm AS frontend
+FROM node:26-bookworm AS frontend
 WORKDIR /web
 COPY cmd/jess-web/web/package.json cmd/jess-web/web/pnpm-lock.yaml ./
 RUN corepack enable pnpm && pnpm install --frozen-lockfile
