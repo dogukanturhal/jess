@@ -152,7 +152,7 @@ zeroize = { version = "1" }
 # fdeflate / flate2 / miniz_oxide — are ALL already in the locked tree or
 # offline cache. OPTIONAL everywhere; only pulled under proxy-core's
 # `ironrdp_live` feature so default builds/CI are byte-for-byte unchanged.
-png = { version = "=0.17.16", default-features = false }
+png = { version = "=0.18.1", default-features = false }
 # LOSSY WebP encoder for the Tier-1 live dirty-rect stream (ADR 0051,
 # feat/rdp-tier1-webp-offthread). `default-features = false` drops the crate's
 # `img` feature (which would pull the WHOLE `image` codec tree); we only use the
