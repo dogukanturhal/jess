@@ -47,6 +47,7 @@ import (
 	"time"
 
 	"github.com/dogukanturhal/jess/internal/deviceattest"
+	"github.com/dogukanturhal/jess/internal/devicecert"
 	"github.com/dogukanturhal/jess/internal/pdp"
 	"github.com/dogukanturhal/jess/internal/vaultx"
 )
@@ -531,9 +532,6 @@ func (h *DeviceCertAttestHandler) mintDeviceCert(
 	userSub, deviceUUID, tier string,
 	csrPEM []byte,
 ) (certPEM, serial string, expiresAt time.Time, err error) {
-	_ = tier // tier is recorded in iam_devices; cert subject is governed by the Vault role + CN.
-	spiffeURI := spiffeURIPrefix + deviceUUID
-
 	signResp, signErr := h.vaultClient.SignPKICert(ctx, deviceCertVaultMount, deviceCertVaultRole,
 		vaultx.PKISignRequest{
 			CSRPEM:     string(csrPEM),
@@ -544,14 +542,28 @@ func (h *DeviceCertAttestHandler) mintDeviceCert(
 			// spiffe://example.com/device/<uuid> against the heartbeat
 			// device_uuid; an alt_names/DNS SAN would never appear there and
 			// every heartbeat would 403 with ErrSANMismatch. The Vault
-			// device-cert role allows_uri_sans = ["spiffe://example.com/device/*"].
-			URISans: []string{spiffeURI},
+			// device-cert role allowed_uri_sans = ["spiffe://example.com/device/*",
+			// "urn:hexxlock:device-tier:*"] (the second entry carries the tier).
+			URISans: deviceCertURISans(deviceUUID, tier),
 		})
 	if signErr != nil {
 		return "", "", time.Time{}, fmt.Errorf("vault pki sign: %w", signErr)
 	}
 
 	return signResp.Certificate, signResp.SerialNumber, signResp.Expiration, nil
+}
+
+// deviceCertURISans returns the URI SANs for a device cert: the SPIFFE device
+// identity plus, for a known tier, the server-attested tier SAN
+// (devicecert.TierURIPrefix + tier). The posture signer reads the tier from
+// the verified cert instead of trusting the agent. An unknown/empty tier
+// emits no tier SAN (the signer then treats the device as TIER_BYOD).
+func deviceCertURISans(deviceUUID, tier string) []string {
+	sans := []string{spiffeURIPrefix + deviceUUID}
+	if devicecert.ValidTier(tier) {
+		sans = append(sans, devicecert.TierURIPrefix+tier)
+	}
+	return sans
 }
 
 // validateAttestRequest performs field-level validation on the decoded request

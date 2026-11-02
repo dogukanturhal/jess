@@ -62,6 +62,7 @@ func buildDeviceRenewHandler(next http.Handler) (http.Handler, bool) {
 	// Falcon-ID by-uuid endpoint is deployed. Reuses the same Falcon-ID
 	// internal URL + s2s token source as the attest wiring.
 	var lookup deviceLookup
+	var corpAsset CorpAssetChecker
 	// The OTP-witness age cap also needs the lookup, so JESS_WITNESS_ALLOW_OTP
 	// forces it on (otherwise an OTP device could renew forever).
 	if os.Getenv("JESS_DEVICE_RENEW_REVOCATION_CHECK") == "true" || witnessAllowOTP() {
@@ -69,13 +70,17 @@ func buildDeviceRenewHandler(next http.Handler) (http.Handler, bool) {
 		if falconURL == "" {
 			log.Fatal("jess-controller: JESS_DEVICE_RENEW_REVOCATION_CHECK=true requires JESS_FALCON_ID_INTERNAL_URL")
 		}
-		lookup = devicepolicy.NewFalconIDEnrollmentStoreWithSource(falconURL, falconIDS2STokenSource())
+		store := devicepolicy.NewFalconIDEnrollmentStoreWithSource(falconURL, falconIDS2STokenSource())
+		lookup = store
+		corpAsset = store
 		log.Printf("jess-controller: device-cert renewal REVOCATION CHECK enabled (falcon-id=%s)", falconURL)
 	}
 
 	log.Printf("jess-controller: device-cert RENEW handler ENABLED (ca=%s)", caPath)
 	h := NewDeviceRenewHandler(next, verifier, vc, lookup)
 	h.otpMaxAge = otpWitnessMaxAge()
+	h.corpAsset = corpAsset
+	h.corpAssetEnforce = env("JESS_CORP_ASSET_GATE", "audit") == "enforce"
 	return h, true
 }
 

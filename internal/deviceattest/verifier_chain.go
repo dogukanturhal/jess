@@ -31,6 +31,10 @@ type chainVerifier struct {
 	vendorRoots *x509.CertPool
 	platform    string
 	now         func() time.Time
+	// store, when set, records the enrollment after a successful chain
+	// verification (same Register call as the TOFU path) so the renewal gate
+	// finds a record. nil = no persistence (tests / legacy wiring).
+	store EnrollmentStore
 }
 
 // ChainOption configures a chainVerifier.
@@ -40,6 +44,13 @@ type ChainOption func(*chainVerifier)
 // to simulate expired or future certificates without real clock manipulation.
 func WithChainClock(fn func() time.Time) ChainOption {
 	return func(v *chainVerifier) { v.now = fn }
+}
+
+// WithChainStore makes the verifier persist a successful Path A enrollment via
+// store.Register, mirroring the TOFU verifier. Without a record the renewal
+// handler's enrolled-device gate would 403 every chain-path renewal.
+func WithChainStore(store EnrollmentStore) ChainOption {
+	return func(v *chainVerifier) { v.store = store }
 }
 
 // NewChainVerifier constructs a production Path A verifier.
@@ -83,7 +94,7 @@ func NewChainVerifier(platform string, vendorRoots *x509.CertPool, opts ...Chain
 //  6. Validate EK key usage: x509.KeyUsageKeyEncipherment or
 //     x509.KeyUsageDataEncipherment must be set (TCG EK profile §3.2.7).
 //  7. Return TIER_CORP on success.
-func (v *chainVerifier) Verify(_ context.Context, req VerifyRequest) (VerifyResponse, error) {
+func (v *chainVerifier) Verify(ctx context.Context, req VerifyRequest) (VerifyResponse, error) {
 	// Guard 1: Path A requires the EK certificate.
 	if len(req.EKCertPEM) == 0 {
 		return VerifyResponse{}, fmt.Errorf(
@@ -96,8 +107,7 @@ func (v *chainVerifier) Verify(_ context.Context, req VerifyRequest) (VerifyResp
 	// Guard 2 (anti-spoof): manufacturer+kind matrix overrides cert
 	// presence. RequiresTOFU encodes the operator-locked fact "this
 	// hardware family does not factory-ship an EK cert chain we trust"
-	// — usually AMD consumer fTPM (per internal engineering notes
-	// path_b_2026_06_06). A client cannot bypass that ceiling by
+	// — usually AMD consumer fTPM. A client cannot bypass that ceiling by
 	// presenting any cert, however well-signed. Force Path B routing
 	// at the verifier layer so the safety holds independent of how
 	// the controller's Registry happens to be wired.
@@ -181,6 +191,26 @@ func (v *chainVerifier) Verify(_ context.Context, req VerifyRequest) (VerifyResp
 				"(TCG EK Credential Profile v2.5 §3.2.7); KeyUsage=0x%x",
 			ErrVerification, cert.KeyUsage,
 		)
+	}
+
+	if v.store != nil {
+		row := EnrolledDevice{
+			DeviceUUID:      req.DeviceUUID,
+			UserSub:         req.UserSub,
+			Platform:        req.Platform,
+			AttestationPath: "A_chain",
+			Tier:            "TIER_CORP",
+			EKPubkeyHash:    EKHashOf(req.EKPubKeyPEM),
+			TPMManufacturer: req.Manufacturer,
+			TPMKind:         req.Kind,
+			SerialNumber:    req.SerialNumber,
+			Model:           req.Model,
+			Manufacturer:    req.SystemManufacturer,
+			EnrolledAt:      v.now(),
+		}
+		if err := v.store.Register(ctx, row); err != nil {
+			return VerifyResponse{}, fmt.Errorf("%w: enrollment store write failed: %v", ErrVerification, err)
+		}
 	}
 
 	return VerifyResponse{

@@ -106,7 +106,7 @@ The posture-signer service is a NEW component:
 - Phase 2 ships in WEEKS not months — most substrate exists in jess Phase 5+
 - ZTNA Rego baseline (Talon Phase 5) gates Jess access without jess code changes
 - Existing CAEP subscriber (jess Phase 5h-6) gives continuous verification "for free"
-- SpiceDB-derived SSH principals close the `allow_users='*'` tier-1 gap from jess Phase 5
+- SpiceDB-derived SSH principals close the `allow_users='*'` gap left by jess Phase 5
 - Wire-compatible posture JWT contract lets the Phase 4 agent target both Talon AND Jess
 
 ### Negative

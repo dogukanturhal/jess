@@ -13,7 +13,7 @@
 // HTTP-only (no gRPC) for now. Rationale: Falcon-ID exposes no gRPC
 // contract today; its service surface is gin+JSON. The internal/v1
 // ServiceAuth pattern (OAuth2 client_credentials Bearer) is the canonical
-// s2s auth for this fleet (see internal engineering notes in memory). A
+// s2s auth for this fleet. A
 // gRPC migration path is straightforward — the interface is isolated here,
 // so swapping transport requires only this file.
 //

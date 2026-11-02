@@ -170,4 +170,3 @@ remains the authoritative pinned baseline during rollout.
   Tier-0 source (PAW), never a lower-tier jump box.
 - Teleport / IDSA / PAM guidance — auto-discovery is best practice **only with
   governance on labeling**; unreviewed labels silently enter RBAC scope.
-- internal engineering notes (operator memory).

@@ -2,7 +2,7 @@
 
 Status: Proposed (2026-06-17)
 Relates: ADR 0040 D-003 (device-cert 24h TTL, client auto-rotate at 12h),
-ADR 0043 (device attest), internal engineering notes
+ADR 0043 (device attest)
 
 ## Problem
 
@@ -35,7 +35,7 @@ witness, no GUI dependency.
   jess-controller HTTP port (plain HTTP behind Envoy; Linkerd mTLS secures
   the hop). jess-controller is meshed → its Server CR must authorize the EG
   data-plane SA `envoy-envoy-gateway-system-eg-canary-<hash>` (same Linkerd
-  fix as posture-signer — see the posture memory; remember the stale-snapshot
+  fix as posture-signer; remember the stale-snapshot
   rollout-restart caveat).
 - Auth = the presented cert (XFCC): validate chain→`jess-device-ca`, not
   expired, `id-kp-clientAuth` EKU, extract `device_uuid` from the SPIFFE

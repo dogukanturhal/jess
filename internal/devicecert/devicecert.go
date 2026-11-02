@@ -31,6 +31,38 @@ const SPIFFEPrefix = "spiffe://example.com/device/"
 // (ZTNA no-WireGuard C1). A cert WITHOUT it is kind=device.
 const BrowserKindURI = "urn:hexxlock:cert-kind:browser"
 
+// TierURIPrefix prefixes the URI SAN that carries the server-attested device
+// tier, e.g. urn:hexxlock:device-tier:TIER_CORP. Stamped by jess from the
+// device record; the posture signer reads it from the verified cert.
+const TierURIPrefix = "urn:hexxlock:device-tier:"
+
+// ValidTier reports whether t is a tier jess may embed in a device cert.
+func ValidTier(t string) bool {
+	switch t {
+	case "TIER_CORP", "TIER_BYOD", "TIER_BREAKGLASS":
+		return true
+	}
+	return false
+}
+
+// TierFromCert returns the tier carried by the leaf's tier URI SAN, or "" when
+// there is none, it is unrecognised, or several distinct tiers conflict.
+func TierFromCert(c *x509.Certificate) string {
+	tier := ""
+	for _, u := range c.URIs {
+		raw := u.String()
+		if !strings.HasPrefix(raw, TierURIPrefix) {
+			continue
+		}
+		t := strings.TrimPrefix(raw, TierURIPrefix)
+		if !ValidTier(t) || (tier != "" && tier != t) {
+			return ""
+		}
+		tier = t
+	}
+	return tier
+}
+
 // Sentinel errors — callers map these to HTTP status codes.
 var (
 	ErrNoCert         = errors.New("devicecert: no client certificate presented")

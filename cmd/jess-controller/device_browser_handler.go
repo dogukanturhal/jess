@@ -115,7 +115,7 @@ func (h *DeviceRenewHandler) handleBrowser(w http.ResponseWriter, r *http.Reques
 		writeRenewError(w, http.StatusForbidden, "browser certificates cannot request browser certificates")
 		return
 	}
-	if !h.checkEnrolled(r.Context(), w, id.DeviceUUID, "browser cert") {
+	if _, ok := h.checkEnrolled(r.Context(), w, id.DeviceUUID, "browser cert"); !ok {
 		return
 	}
 
