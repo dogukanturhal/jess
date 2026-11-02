@@ -3,8 +3,8 @@
 Status: Accepted — 2026-06-24. Implemented (server + browser + auth); builds
 clean. Live end-to-end needs a browser + a reachable UDP/QUIC path (see
 "Deployment"). OFF by default. WebSocket remains the default + fallback.
-Related: ADR 0051 (IronRDP live console / WS TLV wire), ADR 0053 (H.264/EGFX),
-internal engineering notes (Talon is the sole IAP).
+Related: ADR 0051 (IronRDP live console / WS TLV wire), ADR 0053 (H.264/EGFX).
+Talon is the sole IAP.
 
 ## Context
 

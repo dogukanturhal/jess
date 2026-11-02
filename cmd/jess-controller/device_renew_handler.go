@@ -57,6 +57,11 @@ type DeviceRenewHandler struct {
 	// lookup is the optional revocation gate. nil = check disabled (the
 	// renew path is then authenticated solely by the current device cert).
 	lookup deviceLookup
+	// corpAsset re-checks the corporate-asset allowlist before a renewal may
+	// keep TIER_CORP. nil = no re-check (the presented CORP SAN is carried).
+	// corpAssetEnforce mirrors the attest gate: audit mode only logs.
+	corpAsset        CorpAssetChecker
+	corpAssetEnforce bool
 
 	// browser-cert issuance (POST /device-cert/browser).
 	// otpMaxAge caps how long after enrollment a device witnessed by the
@@ -149,9 +154,11 @@ func (h *DeviceRenewHandler) handleRenew(w http.ResponseWriter, r *http.Request)
 	// error is SOFT-failed (log + proceed): the cert is short-lived and was
 	// valid at issuance, so a Falcon-ID blip must not mass-expire the fleet —
 	// the agent simply retries next cycle. nil lookup = check disabled.
-	if !h.checkEnrolled(r.Context(), w, id.DeviceUUID, "renewal") {
+	dev, ok := h.checkEnrolled(r.Context(), w, id.DeviceUUID, "renewal")
+	if !ok {
 		return
 	}
+	tier := h.renewalTier(r.Context(), id, dev)
 
 	// Step 2 — decode + validate the CSR (proof-of-possession of the key
 	// the new cert will bind to). The CSR's claimed subject/SANs are
@@ -172,13 +179,13 @@ func (h *DeviceRenewHandler) handleRenew(w http.ResponseWriter, r *http.Request)
 
 	// Step 3 — mint a fresh cert for the SAME identity. Same Vault path +
 	// SPIFFE uri_sans as first issuance (mintDeviceCert).
-	spiffeURI := spiffeURIPrefix + id.DeviceUUID
+	// See renewalTier for how the tier is derived.
 	signResp, serr := h.vaultClient.SignPKICert(r.Context(), deviceCertVaultMount, deviceCertVaultRole,
 		vaultx.PKISignRequest{
 			CSRPEM:     string(req.CSRPEM),
 			CommonName: id.UserSub,
 			TTL:        deviceCertTTL,
-			URISans:    []string{spiffeURI},
+			URISans:    deviceCertURISans(id.DeviceUUID, tier),
 		})
 	if serr != nil {
 		log.Printf("device_renew_handler: vault sign failed device=%s: %v", id.DeviceUUID, serr)
@@ -197,33 +204,73 @@ func (h *DeviceRenewHandler) handleRenew(w http.ResponseWriter, r *http.Request)
 }
 
 // checkEnrolled applies the revocation gate (see Step 1.5 in handleRenew).
-// Returns false after writing the 403 when the device is revoked / not
-// enrolled; a transient lookup error is soft-failed.
-func (h *DeviceRenewHandler) checkEnrolled(ctx context.Context, w http.ResponseWriter, deviceUUID, what string) bool {
+// Returns ok=false after writing the 403 when the device is revoked / not
+// enrolled; a transient lookup error is soft-failed. dev is the device
+// record, zero-valued when there is no lookup or the lookup failed.
+func (h *DeviceRenewHandler) checkEnrolled(ctx context.Context, w http.ResponseWriter, deviceUUID, what string) (dev deviceattest.EnrolledDevice, ok bool) {
 	if h.lookup == nil {
-		return true
+		return deviceattest.EnrolledDevice{}, true
 	}
-	dev, lerr := h.lookup.GetByUUID(ctx, deviceUUID)
+	d, lerr := h.lookup.GetByUUID(ctx, deviceUUID)
+	dev = d
 	switch {
 	case lerr != nil:
 		log.Printf("device_renew_handler: revocation lookup failed device=%s (soft-fail, allowing %s): %v", deviceUUID, what, lerr)
 	case dev.DeviceUUID == "":
 		log.Printf("device_renew_handler: %s DENIED device=%s — not enrolled (re-enroll required)", what, deviceUUID)
 		writeRenewError(w, http.StatusForbidden, "device is not enrolled ("+what+" denied; re-enroll required)")
-		return false
+		return deviceattest.EnrolledDevice{}, false
 	case !dev.DisabledAt.IsZero():
 		log.Printf("device_renew_handler: %s DENIED device=%s — revoked at %v (re-enroll required)", what, deviceUUID, dev.DisabledAt)
 		writeRenewError(w, http.StatusForbidden, "device has been revoked ("+what+" denied; re-enroll required)")
-		return false
+		return deviceattest.EnrolledDevice{}, false
 	case dev.WitnessMethod == deviceattest.WitnessMethodOTP && h.otpMaxAge > 0 &&
 		!dev.EnrolledAt.IsZero() && h.now().Sub(dev.EnrolledAt) > h.otpMaxAge:
 		// Authenticator-app witnessed devices are a time-boxed fallback:
 		// past the cap the user must re-enroll (ideally with a passkey).
 		log.Printf("device_renew_handler: %s DENIED device=%s — OTP-witnessed enrollment older than %s (re-enroll required)", what, deviceUUID, h.otpMaxAge)
 		writeRenewError(w, http.StatusForbidden, "device was enrolled with an authenticator-app witness and has exceeded its maximum age ("+what+" denied; re-enroll required)")
-		return false
+		return deviceattest.EnrolledDevice{}, false
 	}
-	return true
+	return dev, true
+}
+
+// renewalTier decides the tier SAN for a renewed cert. The Falcon-ID record
+// alone cannot be trusted for CORP: the TOFU path always writes TIER_BYOD and
+// the chain path's corp-asset downgrade is not reflected in its record. So:
+//   - record unavailable (lookup disabled or failed): carry the presented,
+//     mTLS-verified cert's tier SAN (soft-fail, like the revocation check);
+//   - presented SAN is TIER_CORP and the device's EK is still on the
+//     corporate-asset allowlist: keep TIER_CORP (a lookup error on the
+//     allowlist soft-fails to keep it; audit mode never downgrades);
+//   - otherwise the record tier, but never CORP from the record alone; else
+//     "" (no SAN, the posture signer treats the device as TIER_BYOD).
+func (h *DeviceRenewHandler) renewalTier(ctx context.Context, id *devicecert.Identity, dev deviceattest.EnrolledDevice) string {
+	presented := devicecert.TierFromCert(id.Leaf)
+	if dev.DeviceUUID == "" {
+		return presented
+	}
+	if presented == "TIER_CORP" {
+		if h.corpAsset == nil {
+			return presented
+		}
+		isCorp, err := h.corpAsset.IsCorporateAsset(ctx, dev.EKPubkeyHash)
+		switch {
+		case err != nil:
+			log.Printf("device_renew_handler: corp-asset check failed device=%s (soft-fail, keeping TIER_CORP): %v", id.DeviceUUID, err)
+			return presented
+		case isCorp:
+			return presented
+		case !h.corpAssetEnforce:
+			log.Printf("device_renew_handler: [AUDIT] device=%s no longer a corporate asset — enforce mode WOULD downgrade CORP->BYOD; keeping TIER_CORP", id.DeviceUUID)
+			return presented
+		}
+		log.Printf("device_renew_handler: device=%s no longer a corporate asset — renewing as TIER_BYOD", id.DeviceUUID)
+	}
+	if dev.Tier != "TIER_CORP" && devicecert.ValidTier(dev.Tier) {
+		return dev.Tier
+	}
+	return "TIER_BYOD"
 }
 
 // validateCSRSelfSigned checks the CSR is well-formed and self-signed

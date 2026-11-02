@@ -35,8 +35,8 @@ resource "vault_mount" "jess_device_ca" {
   type        = "pki"
   description = "Jess device-cert CA (ZTNA Phase 3, ADR 0040)"
 
-  # Root: 5-year. Caps the leaf TTL per
-  # internal engineering notes.
+  # Root: 5-year. Caps the leaf TTL: Vault
+  # bounds issued cert lifetimes by the mount max_lease_ttl.
   default_lease_ttl_seconds = 86400      # 24h leaf default
   max_lease_ttl_seconds     = 157680000  # 5y root cap
 }

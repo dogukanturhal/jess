@@ -203,7 +203,7 @@ func buildDeviceAttestRegistry(issuer, jwksURL string, enrollmentStore *devicepo
 		// handler can look up the correct verifier when EKCertPEM is present.
 		for _, platform := range supportedPlatforms {
 			p := platform
-			reg.Register(p+"+chain", deviceattest.NewChainVerifier(p, vendorRoots))
+			reg.Register(p+"+chain", deviceattest.NewChainVerifier(p, vendorRoots, deviceattest.WithChainStore(enrollmentStore)))
 		}
 		log.Printf("jess-controller: Path A (chain) verification enabled for platforms=%v (roots=%s)", supportedPlatforms, rootsPath)
 	}
