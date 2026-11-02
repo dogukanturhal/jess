@@ -10,7 +10,7 @@
 // Tier-1 PAM-discovery research (deep-research wf_eeb3aa50-3b5, 2026-06-06)
 // confirmed AD/LDAP is the canonical source for Windows hosts in every
 // surveyed legacy PAM stack (CyberArk DNA, BeyondTrust, Delinea Secret
-// Server, Teleport Desktop). For HexxLock's estate this is the right
+// Server, Teleport Desktop). For a typical estate this is the right
 // shape — every Windows host (ad-dc, exchange-01, …) already exists as
 // an AD Computer object; one bind credential makes the whole fleet
 // auto-discoverable.

@@ -5,7 +5,7 @@
 //
 // Why a Proxmox provider at all
 // =============================
-// HexxLock's actual fleet lives on Proxmox today (152.89.37.98:8006).
+// A typical homelab or datacentre fleet lives on Proxmox.
 // The static JSON ConfigMap covers the half-dozen always-on services
 // but every dev VM, every test bench, every short-lived experiment is
 // invisible to jess. With this provider, tagging a VM in Proxmox
@@ -136,12 +136,12 @@ type vmConfigResp struct {
 	Data map[string]any `json:"data"`
 }
 
-// Config tunes the provider. Defaults are picked for HexxLock's
-// 1-cluster Proxmox at 152.89.37.98:8006 but every field is
+// Config tunes the provider. Defaults are picked for a typical
+// single-cluster Proxmox but every field is
 // configurable for other deployments.
 type Config struct {
 	// Endpoint is the Proxmox API base URL — e.g.
-	// https://152.89.37.98:8006. Required.
+	// https://proxmox.example.com:8006. Required.
 	Endpoint string
 
 	// TokenID is the PVE API token identity — e.g.
@@ -153,8 +153,8 @@ type Config struct {
 	TokenSecret string
 
 	// InsecureSkipVerify allows the provider to talk to a Proxmox host
-	// with a self-signed cert. HexxLock's prod Proxmox is self-signed
-	// per the operator's connection tooling so DEFAULT IS TRUE here for HexxLock.
+	// with a self-signed cert. A production Proxmox cluster is self-signed
+	// per the operator's connection tooling so DEFAULT IS TRUE here.
 	// External customers should pin a CABundle instead.
 	InsecureSkipVerify bool
 

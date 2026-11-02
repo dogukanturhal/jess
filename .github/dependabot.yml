@@ -1,47 +1,97 @@
+# This repository is generated from an upstream source; dependency bumps are applied
+# upstream and arrive via sync. Grouped monthly PRs here are signals, not merge targets.
 version: 2
 updates:
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
-      opentelemetry:
-        patterns: ["go.opentelemetry.io/*"]
-      kubernetes:
-        patterns: ["k8s.io/*"]
-    open-pull-requests-limit: 10
+      all:
+        applies-to: version-updates
+        patterns: ["*"]
+      all-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    open-pull-requests-limit: 2
 
   - package-ecosystem: cargo
     directory: /services/ironrdp-broker
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: monthly
+    groups:
+      all:
+        applies-to: version-updates
+        patterns: ["*"]
+      all-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    open-pull-requests-limit: 2
 
   - package-ecosystem: npm
     directory: /cmd/jess-web/web
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: monthly
+    groups:
+      all:
+        applies-to: version-updates
+        patterns: ["*"]
+      all-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    open-pull-requests-limit: 2
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      all:
+        applies-to: version-updates
+        patterns: ["*"]
+      all-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    open-pull-requests-limit: 2
 
   # Dockerfile base images (golang, node, rust, distroless, debian).
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      all:
+        applies-to: version-updates
+        patterns: ["*"]
+      all-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    open-pull-requests-limit: 2
 
   # Base image of the demo target SSH server.
   - package-ecosystem: docker
     directory: /demo/target-ssh
     schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      all:
+        applies-to: version-updates
+        patterns: ["*"]
+      all-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    open-pull-requests-limit: 2
 
   # Images pinned in the demo compose file (Vault, MinIO, Postgres, mock OIDC).
   - package-ecosystem: docker-compose
     directory: /demo
     schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      all:
+        applies-to: version-updates
+        patterns: ["*"]
+      all-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    open-pull-requests-limit: 2
