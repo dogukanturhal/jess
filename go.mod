@@ -22,7 +22,7 @@ require (
 	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/google/go-attestation v0.6.1
+	github.com/google/go-attestation v0.6.4
 	github.com/google/go-tpm v0.9.8
 	github.com/hashicorp/yamux v0.1.2
 	github.com/jackc/pgx/v5 v5.9.2
