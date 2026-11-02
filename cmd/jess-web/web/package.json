@@ -12,7 +12,7 @@
     "lint": "tsc -b --noEmit"
   },
   "dependencies": {
-    "@carbon/icons-react": "11.82.0",
+    "@carbon/icons-react": "11.91.0",
     "@carbon/react": "1.110.0",
     "@carbon/styles": "1.109.0",
     "@ibm/plex": "6.4.1",
