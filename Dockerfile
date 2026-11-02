@@ -57,7 +57,7 @@ RUN touch crates/proxy-core/src/lib.rs crates/proxy-core/src/bin/session_live.rs
       --features jess-ironrdp-proxy-core/ironrdp_live --bin session_live
 
 # ----- Go: shared module cache ----------------------------------------------
-FROM golang:1.26-bookworm AS gobase
+FROM golang:1.27-bookworm AS gobase
 WORKDIR /src
 ENV GOFLAGS=-mod=mod \
     CGO_ENABLED=0
