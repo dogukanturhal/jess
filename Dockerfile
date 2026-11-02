@@ -32,7 +32,7 @@ RUN pnpm build
 # Rust 1.89 is the floor for the IronRDP 0.15 / sspi 0.21 dependency tree and
 # must match services/ironrdp-broker/rust-toolchain.toml. The -bookworm tag
 # matches the glibc of the distroless/cc-debian12 runtime base.
-FROM rust:1.89-slim-bookworm AS rust-session-live
+FROM rust:1.99-slim-bookworm AS rust-session-live
 # g++ and nasm: OpenH264 (software H.264) is C++ with optional SIMD assembly.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates pkg-config g++ nasm \
