@@ -28,7 +28,7 @@ require (
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/minio/minio-go/v7 v7.2.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/quic-go/quic-go v0.60.0
+	github.com/quic-go/quic-go v0.62.0
 	github.com/spiffe/go-spiffe/v2 v2.7.0
 	golang.org/x/crypto v0.57.0
 	golang.org/x/oauth2 v0.36.0
@@ -41,7 +41,7 @@ require (
 	github.com/Azure/go-ntlmssp v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20230713084857-e76b763bdc49 // indirect
-	github.com/dunglas/httpsfv v1.1.0 // indirect
+	github.com/dunglas/httpsfv v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
@@ -139,12 +139,12 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
-	github.com/quic-go/webtransport-go v0.11.1
+	github.com/quic-go/webtransport-go v0.13.0
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/tinylib/msgp v1.6.1 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
