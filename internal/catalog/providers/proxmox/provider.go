@@ -154,7 +154,7 @@ type Config struct {
 
 	// InsecureSkipVerify allows the provider to talk to a Proxmox host
 	// with a self-signed cert. HexxLock's prod Proxmox is self-signed
-	// per the hexx-connect skill so DEFAULT IS TRUE here for HexxLock.
+	// per the operator's connection tooling so DEFAULT IS TRUE here for HexxLock.
 	// External customers should pin a CABundle instead.
 	InsecureSkipVerify bool
 

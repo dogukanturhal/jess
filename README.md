@@ -1,13 +1,27 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/media/logo-light.svg">
+    <img alt="Jess" src="docs/media/logo-light.svg" height="120">
+  </picture>
+</p>
+
 # Jess
+
+**Access broker for SSH, databases and RDP: short-lived, identity-bound access, with every session recorded and audit-logged.**
 
 [![CI](https://github.com/dogukanturhal/jess/actions/workflows/ci.yml/badge.svg)](https://github.com/dogukanturhal/jess/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/dogukanturhal/jess.svg)](https://pkg.go.dev/github.com/dogukanturhal/jess)
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dogukanturhal/jess/badge)](https://scorecard.dev/viewer/?uri=github.com/dogukanturhal/jess)
 
-An access broker for SSH, databases and RDP: operators get short-lived,
-identity-bound access to infrastructure that has no standing network path to
-them, and every session is recorded and written to an audit trail.
+Pre-1.0. Not independently audited. Runs in the author's own production.
+
+[Quickstart](#quickstart) · [Docs](docs/DESIGN.md) · [Architecture](#architecture) · [Security](#security) · [Contributing](#contributing)
+
+Operators reach infrastructure that has no standing network path to them. Each
+session needs an unexpired grant, uses credentials minted for that session, and
+leaves a signed recording and an audit trail.
 
 ## Who it is for
 
@@ -19,7 +33,17 @@ HashiCorp Vault (or are willing to), and want to read and change the broker's
 code.
 
 If you need Kubernetes, web application or cloud console access today, or a
-vendor to call, look at the alternatives below first. Jess is pre-1.0.
+vendor to call, look at the alternatives below first.
+
+## What works today
+
+| Target | Status | Notes |
+|---|---|---|
+| SSH | Working | Worker is an SSH server to the operator and a client to the target with a per-session Vault-signed certificate. Recorded as asciicast v2. Used in the demo. |
+| PostgreSQL | Working | Wire-protocol relay (`internal/dbproxy`) with a Vault dynamic credential the operator never sees. Statement text goes to the audit log. Used in the demo. |
+| MySQL / MariaDB | Working, less exercised | Relay in `internal/mysqlproxy` using Vault dynamic credentials; statements go to the audit log. Has an integration test against `mysql:8`; not in the demo. |
+| RDP | Working, youngest part | Browser only, through `jess-web` and the Rust broker in `services/ironrdp-broker`. Needs Windows hosts with NLA. Host certificate checked against an AD CS trust anchor when configured (`internal/rdphosttrust`). Not in the demo. |
+| Kubernetes | Not supported | Kubernetes is a source of targets only. The `exec` and `port-forward` code in `internal/broker/kubernetes.go` is not registered by the worker. |
 
 ## Features
 
@@ -93,7 +117,7 @@ admin API. Discovered targets can wait in a pending state for approval before
 they are brokered. The worker probes targets with the same code path it uses
 for sessions, to spot drift.
 
-## Quickstart (about 5 minutes)
+## Quickstart
 
 Needs Docker with the compose plugin. The full walkthrough, including the
 Postgres target and how to check a recording's signature, is in
@@ -110,6 +134,16 @@ docker compose run --rm operator         # ssh to the target through the broker;
 
 docker compose run --rm mc ls --recursive local/audit-archive   # recording, manifest, signature
 ```
+
+For the Postgres target:
+
+```sh
+docker compose run --rm -e JESS_TARGET=demo-postgres operator -c 'select * from widgets'
+```
+
+Expected: the operator command prints a shell prompt on the target, and the
+`mc ls` output lists `recording.cast`, `manifest.json` and `manifest.sig`
+under a session id.
 
 Replay the recording with `asciinema play` after copying it out; the commands
 are in the demo README. The demo uses fixed development credentials and a
@@ -139,35 +173,37 @@ plaintext operator port. Do not run it anywhere reachable.
 
 ## Architecture
 
-```
-                      OIDC provider (tokens, roles)
-                              │ verify
- operator ── jessctl ──┐      ▼
- (ssh, psql)           ├──► jess-controller ──── Postgres (grants, sessions,
- browser ── jess-web ──┘      │   │                        audit chain)
-       │                      │   └─ catalog (file / CRDs / discovery)
-       │ spawns               │ streams over yamux, mTLS
-       ▼                      │ (workers dial in; outbound only)
-  session_live (Rust)         ▼
-  RDP ──► Windows         jess-worker ──► SSH / Postgres / MySQL / TCP targets
-                              │
-                              ├─► Vault: SSH CA, dynamic DB credentials,
-                              │          transit key (signs recordings)
-                              └─► MinIO / S3 (Object Lock): recordings,
-                                     manifests, signatures
+```mermaid
+flowchart LR
+  op["Operator<br/>jessctl, ssh, psql"] --> ctl["jess-controller"]
+  br["Browser"] --> web["jess-web"]
+  web --> ctl
+  web -->|RDP| rdp["Rust RDP broker<br/>(IronRDP)"]
+  rdp --> win["Windows host"]
+  ctl -->|verify token| idp["OIDC provider"]
+  ctl --> pg[("Postgres<br/>grants, sessions, audit chain")]
+  wrk["jess-worker"] -->|"dials out, mTLS"| ctl
+  wrk --> tgt["SSH / Postgres / MySQL / TCP targets"]
+  wrk --> vault["Vault<br/>SSH CA, DB creds, transit key"]
+  wrk --> s3[("S3 / MinIO<br/>Object Lock<br/>recordings")]
 ```
 
-Design notes are in [docs/DESIGN.md](docs/DESIGN.md) and the decision records
-in [docs/adr](docs/adr).
+The controller authorizes each session; the worker sits next to the targets,
+connects out to the controller, and carries the session. The recorder runs in
+the worker and signs each bundle with a Vault transit key. Design notes are in
+[docs/DESIGN.md](docs/DESIGN.md) and the decision records in
+[docs/adr](docs/adr).
 
 ## Status and limitations
 
-Pre-1.0 and not independently audited. It brokers operator access at
-[HexxLock](https://hexxlock.com), the author's company; there are no
-published third-party deployments. The command-line flags, environment
-variables and the admin API may change between releases.
+Pre-1.0 and not independently audited. The author's company, [HexxLock](https://hexxlock.com),
+uses it to broker operator access; there are no published third-party
+deployments. The command-line flags, environment variables and the admin API
+may change between releases.
 
-Known gaps, so you do not find them the hard way:
+Summary: SSH and PostgreSQL are the best-tested paths; MySQL and RDP have had
+less testing; Kubernetes brokering does not exist. Details, so you do not find
+them the hard way:
 
 - **Recordings are buffered in memory until the session closes.** SSH and
   database recordings are written to the store when the session ends, not as
@@ -196,17 +232,26 @@ Known gaps, so you do not find them the hard way:
 - **In-memory grants unless `JESS_DB_DSN` is set.** That is fine for one
   process; workers re-check grants in the same store, so use Postgres for
   anything else.
-- **Defaults name one vendor's identity provider.** `JESS_OIDC_ISSUER`
-  defaults to HexxLock's own issuer. Set it. Any OIDC provider that puts
+- **Set `JESS_OIDC_ISSUER`.** The controller and `jess-web` default to the
+  placeholder `https://id.example.com`, which will not work; point it at your
+  provider (for example `https://idp.example.com`). Any OIDC provider that puts
   `roles` in the token works; the demo uses a mock server.
 - **RDP is the youngest part.** It needs Windows hosts with NLA (CredSSP),
   runs in a separate Rust process that `jess-web` starts, and has had less
   testing than SSH and Postgres. Pre-positioned credentials for RDP when
   Vault is down (`internal/offlinecreds`) are new.
 
+## Community
+
+Questions and ideas: [GitHub Discussions](https://github.com/dogukanturhal/jess/discussions).
+Bugs and feature requests: [issues](https://github.com/dogukanturhal/jess/issues).
+
 ## Security
 
-Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
+Report vulnerabilities privately through GitHub private vulnerability
+reporting: <https://github.com/dogukanturhal/jess/security/advisories/new>.
+If you cannot use GitHub, email dogukanturhal@hexxlock.com. See
+[SECURITY.md](SECURITY.md). Please do not open a public issue.
 
 ## Contributing
 
