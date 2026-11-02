@@ -149,7 +149,7 @@ func TestRego_Tier0RDPHardDeny_NoTag(t *testing.T) {
 	}
 }
 
-// The guard is RDP-specific: SSH to a critical host (the legitimate dc01 SSH
+// The guard is RDP-specific: SSH to a critical host (the legitimate ad-dc SSH
 // admin path) is still promotable via the explicit tag.
 func TestRego_SSHToCriticalHost_TagStillPromotes(t *testing.T) {
 	d := evalOnly(t, loadRealPolicy(t, "discovery.rego"), map[string]any{
@@ -221,7 +221,7 @@ func TestStripPendingFields_RemovesProvenance(t *testing.T) {
 		"protocol":      "ssh",
 		"address":       "host:22",
 		"source":        "ldap",
-		"source_ref":    "CN=dc01,DC=corp",
+		"source_ref":    "CN=ad-dc,DC=corp",
 		"discovered_at": "2026-06-06T00:00:00Z",
 		"criticality":   "high",
 	}

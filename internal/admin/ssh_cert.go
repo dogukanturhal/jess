@@ -18,7 +18,7 @@
 // verified posture-tier + device-UUID downstream so jess doesn't have
 // to re-validate them. Per ADR 0040 §Phase 4, that header is signed by
 // Talon's iap-identity-key (which jess can verify via Talon's JWKS at
-// internal.example.com/.well-known/jwks.json). For this scaffold the
+// auth.internal.example.com/.well-known/jwks.json). For this scaffold the
 // device-UUID is sourced from a trusted header — wiring the JWKS
 // verification lands in a follow-up MR (task #140 jess↔talon SSH bridge
 // closeout).

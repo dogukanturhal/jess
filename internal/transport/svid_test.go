@@ -28,9 +28,9 @@ import (
 // socket-absent falls back to file-PEM, and the flag-off gate is a no-op.
 
 const (
-	tdControllerID = "spiffe://prod.hexxlock/ns/jess/sa/jess/controller"
-	tdWorkerID     = "spiffe://prod.hexxlock/ns/jess/sa/jess/worker"
-	tdImpostorID   = "spiffe://prod.hexxlock/ns/jess/sa/jess/impostor"
+	tdControllerID = "spiffe://prod.example/ns/jess/sa/jess/controller"
+	tdWorkerID     = "spiffe://prod.example/ns/jess/sa/jess/worker"
+	tdImpostorID   = "spiffe://prod.example/ns/jess/sa/jess/impostor"
 )
 
 // fakeX509Source is an in-memory X509SVIDSource: a fixed SVID plus a fixed trust

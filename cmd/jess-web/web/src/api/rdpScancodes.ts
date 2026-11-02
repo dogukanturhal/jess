@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // KeyboardEvent.code → RDP PC/XT scancode (set 1) map for the P2b TLV KEY wire
 // message (ADR 0051). Extended keys carry the 0xE0 prefix in the HIGH byte of
 // the u32 scancode (e.g. right-ctrl = 0xE01D), matching the Rust side's

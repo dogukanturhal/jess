@@ -30,7 +30,7 @@ The chain is computed in a Postgres transaction with `SELECT ... FOR UPDATE` on 
 
 **jess is the only stack in the surveyed comparator set that combines per-session signing AND cross-session chain.** Boundary has per-directory hashes but no chain. Teleport has per-session encryption but no chain. Guacamole has nothing at all.
 
-This is a real AU-10 (Non-Repudiation) advantage. Per the SOC 2 CC6 mapping (`docs/compliance/soc2-cc6-mapping.md`), CC6.7 evidence is significantly strengthened by being able to prove "the audit log was not modified between session-close and audit-pull".
+This is a real AU-10 (Non-Repudiation) advantage. For SOC 2 CC6.7 evidence is significantly strengthened by being able to prove "the audit log was not modified between session-close and audit-pull".
 
 ## Where it surfaces in the product
 
@@ -68,5 +68,3 @@ This is a real AU-10 (Non-Repudiation) advantage. Per the SOC 2 CC6 mapping (`do
 ## Cross-references
 
 - ADR 0034 §"Architecture findings" / "Session-recording integrity comparison" — vendor matrix.
-- `docs/compliance/soc2-cc6-mapping.md` — CC6.7 evidence section cites this feature.
-- `docs/compliance/cisa-ztmm-v2-mapping.md` — Data pillar + Visibility & Analytics cross-cutter both cite this as evidence of "Advanced" maturity.

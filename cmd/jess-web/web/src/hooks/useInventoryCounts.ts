@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // useInventoryCounts — powers the inventory rail badges + masthead alert
 // indicator. Best-effort: every source is optional and failures degrade to
 // the previous/zero value (the rail must never error out the whole shell).

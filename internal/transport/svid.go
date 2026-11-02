@@ -16,7 +16,7 @@ import (
 
 // SPIRE SVID mTLS defaults for the jess controller↔worker link. These match the
 // 2026-07-19 SPIFFE/SPIRE identity foundation design: a per-environment trust
-// domain (prod.hexxlock) with per-component workload IDs differentiated by pod
+// domain (prod.example) with per-component workload IDs differentiated by pod
 // label. Override each via its JESS_SPIRE_* env var.
 const (
 	// DefaultSpireSocket is the SPIRE Agent Workload API address (the standard
@@ -25,13 +25,13 @@ const (
 	DefaultSpireSocket = "unix:///spiffe-workload-api/spire-agent.sock"
 	// DefaultSpireTrustDomain is the production SPIFFE trust domain. Override
 	// with JESS_SPIRE_TRUST_DOMAIN.
-	DefaultSpireTrustDomain = "prod.hexxlock"
+	DefaultSpireTrustDomain = "prod.example"
 	// DefaultControllerSPIFFEID is the controller's registered SPIFFE ID; the
 	// worker pins it. Override with JESS_SPIRE_CONTROLLER_ID.
-	DefaultControllerSPIFFEID = "spiffe://prod.hexxlock/ns/jess/sa/jess/controller"
+	DefaultControllerSPIFFEID = "spiffe://prod.example/ns/jess/sa/jess/controller"
 	// DefaultWorkerSPIFFEID is the worker's registered SPIFFE ID; the
 	// controller pins it. Override with JESS_SPIRE_WORKER_ID.
-	DefaultWorkerSPIFFEID = "spiffe://prod.hexxlock/ns/jess/sa/jess/worker"
+	DefaultWorkerSPIFFEID = "spiffe://prod.example/ns/jess/sa/jess/worker"
 )
 
 // DefaultSVIDDialTimeout bounds the initial Workload API fetch so a present-but-

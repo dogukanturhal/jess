@@ -13,7 +13,7 @@ package main
 //   1. Single origin for the SPA (same cookie, no CORS, no second
 //      OIDC dance against the broker route)
 //   2. broker URL is internal-cluster (jess-ironrdp-broker.jess.svc:7104)
-//      and stays that way until internal.example.com goes live in
+//      and stays that way until rdp.internal.example.com goes live in
 //      Phase 5f-3 follow-up — even then the dual-origin alternative
 //      forces operators through Talon TWICE
 //   3. We can synthesise SPA-visible error frames if the broker is

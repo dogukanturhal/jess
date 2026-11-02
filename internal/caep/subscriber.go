@@ -90,7 +90,7 @@ type AuditEmitter interface {
 // Subscriber is the long-lived SSE client. Run blocks until ctx is
 // cancelled; reconnect loop is internal.
 type Subscriber struct {
-	EndpointURL string        // e.g. https://id.hexxlock.com/api/v1/cae/events
+	EndpointURL string        // e.g. https://id.example.com/api/v1/cae/events
 	Token       TokenSource   // Bearer source — refreshed per connect attempt
 	HTTPClient  *http.Client  // optional; defaults to http.DefaultClient with 0 timeout
 	Revoker     GrantRevoker  // jit.PostgresStore in production

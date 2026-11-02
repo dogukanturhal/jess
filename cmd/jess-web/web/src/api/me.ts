@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Falcon-ID operator identity surface — backed by /api/me on the Go server.
 // Returns null on 401 (anonymous) or 503 (OIDC disabled in dev). Throws on
 // any other non-OK response so the caller can show a real error.

@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/dogukanturhal/jess/internal/deviceattest"
 	"github.com/dogukanturhal/jess/internal/devicecert"
@@ -56,6 +57,16 @@ type DeviceRenewHandler struct {
 	// lookup is the optional revocation gate. nil = check disabled (the
 	// renew path is then authenticated solely by the current device cert).
 	lookup deviceLookup
+
+	// browser-cert issuance (POST /device-cert/browser).
+	// otpMaxAge caps how long after enrollment a device witnessed by the
+	// authenticator-app OTP fallback may keep renewing (JESS_OTP_WITNESS_MAX_AGE).
+	// Needs lookup; zero disables the cap.
+	otpMaxAge time.Duration
+	now       func() time.Time
+
+	browserRole string // Vault PKI role on the device CA mount
+	browserRL   *issueLimiter
 }
 
 // NewDeviceRenewHandler constructs the renewal handler. verifier + vaultClient
@@ -67,8 +78,16 @@ func NewDeviceRenewHandler(next http.Handler, v *devicecert.Verifier, vc *vaultx
 	if vc == nil {
 		panic("device_renew_handler: vaultClient must not be nil")
 	}
-	return &DeviceRenewHandler{next: next, verifier: v, vaultClient: vc, lookup: lookup}
+	return &DeviceRenewHandler{
+		next: next, verifier: v, vaultClient: vc, lookup: lookup,
+		otpMaxAge: defaultOTPWitnessMaxAge, now: time.Now,
+		browserRole: env("JESS_BROWSER_CERT_VAULT_ROLE", browserCertVaultRole),
+		browserRL:   newIssueLimiter(browserCertRateLimit, time.Hour),
+	}
 }
+
+// defaultOTPWitnessMaxAge is the default JESS_OTP_WITNESS_MAX_AGE.
+const defaultOTPWitnessMaxAge = 720 * time.Hour
 
 // RenewRequest is the JSON body. csr_pem is base64-of-PEM (Go marshals
 // []byte as base64), matching the agent's rotation::RenewRequest.
@@ -84,11 +103,17 @@ type RenewResponse struct {
 }
 
 func (h *DeviceRenewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost || r.URL.Path != "/device-cert/renew" {
-		h.next.ServeHTTP(w, r)
-		return
+	if r.Method == http.MethodPost {
+		switch r.URL.Path {
+		case "/device-cert/renew":
+			h.handleRenew(w, r)
+			return
+		case "/device-cert/browser":
+			h.handleBrowser(w, r)
+			return
+		}
 	}
-	h.handleRenew(w, r)
+	h.next.ServeHTTP(w, r)
 }
 
 func (h *DeviceRenewHandler) handleRenew(w http.ResponseWriter, r *http.Request) {
@@ -109,6 +134,13 @@ func (h *DeviceRenewHandler) handleRenew(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// A browser-kind cert can never renew itself or mint a device cert.
+	if id.Browser {
+		log.Printf("device_renew_handler: renewal DENIED device=%s — browser-kind cert", id.DeviceUUID)
+		writeRenewError(w, http.StatusForbidden, "browser certificates cannot be used to renew")
+		return
+	}
+
 	// Step 1.5 — revocation gate (ADR 0048 hardening). The current device
 	// cert passing mTLS is necessary but not sufficient: a cert that is still
 	// within its 24h validity but whose device has been REVOKED must not
@@ -117,20 +149,8 @@ func (h *DeviceRenewHandler) handleRenew(w http.ResponseWriter, r *http.Request)
 	// error is SOFT-failed (log + proceed): the cert is short-lived and was
 	// valid at issuance, so a Falcon-ID blip must not mass-expire the fleet —
 	// the agent simply retries next cycle. nil lookup = check disabled.
-	if h.lookup != nil {
-		dev, lerr := h.lookup.GetByUUID(r.Context(), id.DeviceUUID)
-		switch {
-		case lerr != nil:
-			log.Printf("device_renew_handler: revocation lookup failed device=%s (soft-fail, allowing renewal): %v", id.DeviceUUID, lerr)
-		case dev.DeviceUUID == "":
-			log.Printf("device_renew_handler: renewal DENIED device=%s — not enrolled (re-enroll required)", id.DeviceUUID)
-			writeRenewError(w, http.StatusForbidden, "device is not enrolled (renewal denied; re-enroll required)")
-			return
-		case !dev.DisabledAt.IsZero():
-			log.Printf("device_renew_handler: renewal DENIED device=%s — revoked at %v (re-enroll required)", id.DeviceUUID, dev.DisabledAt)
-			writeRenewError(w, http.StatusForbidden, "device has been revoked (renewal denied; re-enroll required)")
-			return
-		}
+	if !h.checkEnrolled(r.Context(), w, id.DeviceUUID, "renewal") {
+		return
 	}
 
 	// Step 2 — decode + validate the CSR (proof-of-possession of the key
@@ -174,6 +194,36 @@ func (h *DeviceRenewHandler) handleRenew(w http.ResponseWriter, r *http.Request)
 		SerialNumber:  signResp.SerialNumber,
 		ExpiresAt:     signResp.Expiration.UTC().Format("2006-01-02T15:04:05Z07:00"),
 	})
+}
+
+// checkEnrolled applies the revocation gate (see Step 1.5 in handleRenew).
+// Returns false after writing the 403 when the device is revoked / not
+// enrolled; a transient lookup error is soft-failed.
+func (h *DeviceRenewHandler) checkEnrolled(ctx context.Context, w http.ResponseWriter, deviceUUID, what string) bool {
+	if h.lookup == nil {
+		return true
+	}
+	dev, lerr := h.lookup.GetByUUID(ctx, deviceUUID)
+	switch {
+	case lerr != nil:
+		log.Printf("device_renew_handler: revocation lookup failed device=%s (soft-fail, allowing %s): %v", deviceUUID, what, lerr)
+	case dev.DeviceUUID == "":
+		log.Printf("device_renew_handler: %s DENIED device=%s — not enrolled (re-enroll required)", what, deviceUUID)
+		writeRenewError(w, http.StatusForbidden, "device is not enrolled ("+what+" denied; re-enroll required)")
+		return false
+	case !dev.DisabledAt.IsZero():
+		log.Printf("device_renew_handler: %s DENIED device=%s — revoked at %v (re-enroll required)", what, deviceUUID, dev.DisabledAt)
+		writeRenewError(w, http.StatusForbidden, "device has been revoked ("+what+" denied; re-enroll required)")
+		return false
+	case dev.WitnessMethod == deviceattest.WitnessMethodOTP && h.otpMaxAge > 0 &&
+		!dev.EnrolledAt.IsZero() && h.now().Sub(dev.EnrolledAt) > h.otpMaxAge:
+		// Authenticator-app witnessed devices are a time-boxed fallback:
+		// past the cap the user must re-enroll (ideally with a passkey).
+		log.Printf("device_renew_handler: %s DENIED device=%s — OTP-witnessed enrollment older than %s (re-enroll required)", what, deviceUUID, h.otpMaxAge)
+		writeRenewError(w, http.StatusForbidden, "device was enrolled with an authenticator-app witness and has exceeded its maximum age ("+what+" denied; re-enroll required)")
+		return false
+	}
+	return true
 }
 
 // validateCSRSelfSigned checks the CSR is well-formed and self-signed

@@ -18,9 +18,9 @@
 // JWT contract (ADR 0040 §Phase 4):
 //
 //	{
-//	  "iss":  "https://internal.example.com",
+//	  "iss":  "https://auth.internal.example.com",
 //	  "aud":  "jess",
-//	  "sub":  "spiffe://hexxlock.com/device/<device-uuid>",
+//	  "sub":  "spiffe://example.com/device/<device-uuid>",
 //	  "iat":  …,
 //	  "exp":  …,        # talon-side TTL, typically 60s
 //	  "tier": "TIER_CORP" | "TIER_BYOD" | "TIER_BREAKGLASS",
@@ -49,7 +49,7 @@ type TalonIdentityVerifier struct {
 // admin route handlers.
 type TalonIdentityClaims struct {
 	// Subject is the SPIFFE URI from the device cert
-	// (spiffe://hexxlock.com/device/<uuid>).
+	// (spiffe://example.com/device/<uuid>).
 	Subject string
 	// DeviceUUID is the explicit device_uuid claim — the same UUID
 	// the SPIFFE Subject encodes, but extracted up-front so handlers
@@ -108,8 +108,8 @@ func (t *TalonIdentityVerifier) Verify(ctx context.Context, r *http.Request) (Ta
 	}
 	if c.DeviceUUID == "" {
 		// SPIFFE Subject is the fallback if the explicit claim is
-		// missing. spiffe://hexxlock.com/device/<uuid>
-		const spiffePrefix = "spiffe://hexxlock.com/device/"
+		// missing. spiffe://example.com/device/<uuid>
+		const spiffePrefix = "spiffe://example.com/device/"
 		if strings.HasPrefix(tok.Subject, spiffePrefix) {
 			c.DeviceUUID = strings.TrimPrefix(tok.Subject, spiffePrefix)
 		}

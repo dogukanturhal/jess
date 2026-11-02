@@ -13,7 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const testIssuer = "https://id.test.hexxlock.com"
+const testIssuer = "https://id.test.example.com"
 
 // mintToken signs an RS256 JWT (go-oidc's StaticKeySet default alg, matching
 // Falcon-ID) with the given audiences and returns the raw token plus the
@@ -46,8 +46,8 @@ func TestMultiAudience_AcceptsAnyAllowlisted(t *testing.T) {
 	cases := [][]string{
 		{"svc-jess"},     // jessctl id_token
 		{"svc-jess-web"}, // browser SPA id_token (the failing case)
-		{"svc-jess", "https://api.hexxlock.com", "hexxlock-services"}, // jessctl access token (multi-aud)
-		{"svc-jess-web", "https://api.hexxlock.com"},                  // browser access token
+		{"svc-jess", "https://api.example.com", "hexxlock-services"}, // jessctl access token (multi-aud)
+		{"svc-jess-web", "https://api.example.com"},                  // browser access token
 	}
 	for _, aud := range cases {
 		raw, pub := mintToken(t, aud...)
@@ -66,7 +66,7 @@ func TestMultiAudience_AcceptsAnyAllowlisted(t *testing.T) {
 // TestMultiAudience_RejectsNonAllowlisted — a token whose aud shares nothing
 // with the allowlist is rejected even though its signature is valid.
 func TestMultiAudience_RejectsNonAllowlisted(t *testing.T) {
-	raw, pub := mintToken(t, "svc-other", "https://api.hexxlock.com")
+	raw, pub := mintToken(t, "svc-other", "https://api.example.com")
 	v := NewVerifierFromKeySetMulti(testIssuer, []string{"svc-jess", "svc-jess-web"}, []crypto.PublicKey{pub})
 	if _, err := v.Verify(context.Background(), raw); err == nil {
 		t.Fatal("expected rejection for non-allowlisted audience, got nil")

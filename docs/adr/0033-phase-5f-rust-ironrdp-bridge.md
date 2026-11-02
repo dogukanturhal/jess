@@ -100,7 +100,7 @@ Three findings worth carrying:
 
 **Acceptance:**
 - Lab Windows VM with NLA disabled (test rig is `~/projects/jess/test-rigs/win-2019-no-nla/` per the existing rdp-probe fixtures).
-- Operator opens `https://internal.example.com/rdp/win-test-01` in the SPA; sees the Windows login screen rendered in the canvas; can type into the login screen.
+- Operator opens `https://jess.internal.example.com/rdp/win-test-01` in the SPA; sees the Windows login screen rendered in the canvas; can type into the login screen.
 - `jess_sessions_opened_total{protocol="rdp"}` increments.
 - Existing 5e-10 byte counters populate for direction=client→server and server→client.
 
@@ -131,13 +131,13 @@ Three findings worth carrying:
 
 ### 5f-8b-3 — Smart-card cert flow
 
-**Files:** Vault PKI mount in `infrastructure-iac/datacenters/eu-west-1/vault/vault-jess-smartcard-pki.tf` (new), `services/ironrdp-broker/crates/proxy-core/src/smartcard.rs` (new), sspi-rs integration with smart-card token.
+**Files:** Vault PKI mount in `iac-repo/datacenters/eu-west-1/vault/vault-jess-smartcard-pki.tf` (new), `services/ironrdp-broker/crates/proxy-core/src/smartcard.rs` (new), sspi-rs integration with smart-card token.
 
 **Pre-reqs:**
 - AD CA cross-signs the Vault PKI `jess-smartcard-ca` root (AD-side runbook).
 - AD GPO: "Smart card is required for interactive logon" enabled for the brokered-access OU.
 - Vault PKI role `jess-smartcard-ca/smartcard-login` with `extended_key_usage = clientAuth, smartCardLogon`, `allow_subject_alternative_name_other_names = msUPN` per Microsoft KB 281245.
-- `falcon-id` ServiceClientClaim grants Hexx ops a `windows_upn` claim that maps to their AD UPN (e.g., `dogukanturhal@example.com` → `dogukanturhal@AD.HEXXLOCK.LOCAL`).
+- `falcon-id` ServiceClientClaim grants Hexx ops a `windows_upn` claim that maps to their AD UPN (e.g., `dogukanturhal@example.com` → `dogukanturhal@AD.example.local`).
 
 **Sequence:**
 
@@ -203,7 +203,7 @@ Lock both `ironrdp_connector` and `ironrdp_pdu` to **exact** patch versions in t
 
 - **Unit:** ironrdp_connector state machine driven by fixture byte arrays per phase boundary (Connect Initial, Erect Domain, ChannelJoin, etc.). Existing `proxy-core/src/x224_test.rs` pattern.
 - **Integration:** `ironrdp_server` (Devolutions' Rust RDP server) in a tokio test, broker connector dials it, asserts the bridge transfers correctly.
-- **e2e:** Windows VM test rigs (lab 10.0.10.30/31, dc01-rdp / win-host-01-rdp). Manual smoke for the milestone; automated nightly once stable.
+- **e2e:** Windows VM test rigs (lab 10.0.10.30/31, rdp-host-a / rdp-host-b). Manual smoke for the milestone; automated nightly once stable.
 
 ### Telemetry to add
 

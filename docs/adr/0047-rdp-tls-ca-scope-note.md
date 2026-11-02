@@ -9,8 +9,8 @@ certs), ADR 0030 Phase 5f (RDP broker).
 ## Context
 
 After the Phase A-* program shipped (host-CA cert flip for node-cp-01,
-node-app-01, dc01 — all SSH targets), the catalog still has two RDP
-entries (`dc01-rdp`, `exchange-01-rdp`) that show as `pin` mode in
+node-app-01, ad-dc — all SSH targets), the catalog still has two RDP
+entries (`rdp-host-a`, `exchange-01-rdp`) that show as `pin` mode in
 `host_key_ca_signed` audits. Operators looking at the catalog ask: why
 aren't RDP targets also flipped to CA mode?
 

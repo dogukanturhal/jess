@@ -32,7 +32,7 @@ edition = "2021"
 # to `&BoxedUint` from `&BigUint`). Keep in lockstep with
 # rust-toolchain.toml channel + Dockerfile ARG RUST_VERSION.
 rust-version = "1.89"
-license = "Apache-2.0"
+license = "AGPL-3.0-or-later"
 repository = "https://github.com/dogukanturhal/jess"
 
 [workspace.dependencies]

@@ -51,7 +51,7 @@ func (r *recSink) latest() []catalog.Target {
 // passed verbatim — callers control what's missing/present per test.
 func mkCR(name string, spec map[string]any) *unstructured.Unstructured {
 	u := &unstructured.Unstructured{Object: map[string]any{
-		"apiVersion": "jess.hexxlock.com/v1alpha1",
+		"apiVersion": "jess.example.com/v1alpha1",
 		"kind":       "JessTarget",
 		"metadata":   map[string]any{"name": name},
 		"spec":       spec,

@@ -1,0 +1,54 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For security problems use the private report link in SECURITY.md instead of this form.
+  - type: input
+    id: version
+    attributes:
+      label: Jess version
+      description: Image tag, release tag or commit
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - jess-controller
+        - jess-worker
+        - jess-web (console)
+        - jessctl
+        - RDP broker (services/ironrdp-broker)
+        - Demo (demo/docker-compose.yml)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: protocol
+    attributes:
+      label: Protocol and target
+      placeholder: "SSH to OpenSSH 9.x, Postgres 16, RDP to Windows Server 2022"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Configuration and steps to reproduce
+      description: Remove tokens, credentials and hostnames you do not want public.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant `jess-controller` and `jess-worker` log lines, and the audit events for the session.
+      render: text

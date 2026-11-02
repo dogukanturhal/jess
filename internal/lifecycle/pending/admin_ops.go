@@ -73,16 +73,16 @@ func ApprovePending(ctx context.Context, client dynamic.Interface, name, approve
 		return fmt.Errorf("refusing to approve Tier-0 RDP target %s — DC RDP is never brokered (ADR 0052 hard-guard)", name)
 	}
 	jt := &unstructured.Unstructured{Object: map[string]any{
-		"apiVersion": "jess.hexxlock.com/v1alpha1",
+		"apiVersion": "jess.example.com/v1alpha1",
 		"kind":       "JessTarget",
 		"metadata": map[string]any{
 			"name":   name,
-			"labels": map[string]any{"jess.hexxlock.com/promoted-from": "JessPendingTarget"},
+			"labels": map[string]any{"jess.example.com/promoted-from": "JessPendingTarget"},
 			"annotations": map[string]any{
-				"jess.hexxlock.com/source":      valueOrEmpty(spec, "source"),
-				"jess.hexxlock.com/source-ref":  valueOrEmpty(spec, "source_ref"),
-				"jess.hexxlock.com/approved-by": approvedBy,
-				"jess.hexxlock.com/approved-at": time.Now().UTC().Format(time.RFC3339),
+				"jess.example.com/source":      valueOrEmpty(spec, "source"),
+				"jess.example.com/source-ref":  valueOrEmpty(spec, "source_ref"),
+				"jess.example.com/approved-by": approvedBy,
+				"jess.example.com/approved-at": time.Now().UTC().Format(time.RFC3339),
 			},
 		},
 		"spec": stripPendingFields(spec),

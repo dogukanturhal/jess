@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // useMe — shared /api/me auth gate. Wraps the EXACT same fetch the pages
 // used inline (credentials: same-origin, cache: no-store, 401/503 → anon),
 // so the C2 reskin preserves the per-page auth behavior without changing

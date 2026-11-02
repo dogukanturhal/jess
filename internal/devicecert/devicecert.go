@@ -24,8 +24,12 @@ import (
 )
 
 // SPIFFEPrefix is the device-identity SPIFFE SAN prefix (ADR 0040 D-005):
-// spiffe://hexxlock.com/device/<device-uuid>.
-const SPIFFEPrefix = "spiffe://hexxlock.com/device/"
+// spiffe://example.com/device/<device-uuid>.
+const SPIFFEPrefix = "spiffe://example.com/device/"
+
+// BrowserKindURI is the URI SAN marking a short-lived browser client cert
+// (ZTNA no-WireGuard C1). A cert WITHOUT it is kind=device.
+const BrowserKindURI = "urn:hexxlock:cert-kind:browser"
 
 // Sentinel errors — callers map these to HTTP status codes.
 var (
@@ -33,7 +37,7 @@ var (
 	ErrChainInvalid   = errors.New("devicecert: certificate chain validation failed")
 	ErrExpired        = errors.New("devicecert: certificate is expired")
 	ErrMissingEKU     = errors.New("devicecert: certificate missing ClientAuth EKU")
-	ErrSANMissing     = errors.New("devicecert: no spiffe://hexxlock.com/device/* SAN URI")
+	ErrSANMissing     = errors.New("devicecert: no spiffe://example.com/device/* SAN URI")
 	ErrXFCCMissing    = errors.New("devicecert: X-Forwarded-Client-Cert header absent")
 	ErrXFCCMalformed  = errors.New("devicecert: X-Forwarded-Client-Cert is malformed")
 	ErrXFCCMissingCrt = errors.New("devicecert: X-Forwarded-Client-Cert lacks Cert= field")
@@ -60,6 +64,7 @@ type Identity struct {
 	DeviceUUID string // from the SPIFFE SAN
 	UserSub    string // from the leaf CN
 	SPIFFE     string // full spiffe:// URI
+	Browser    bool   // true when the leaf carries BrowserKindURI (kind=browser)
 }
 
 // VerifyRequest extracts the device cert from XFCC (production) or r.TLS
@@ -106,7 +111,17 @@ func (v *Verifier) verify(leaf *x509.Certificate) (*Identity, error) {
 		DeviceUUID: strings.TrimPrefix(spiffe, SPIFFEPrefix),
 		UserSub:    leaf.Subject.CommonName,
 		SPIFFE:     spiffe,
+		Browser:    hasBrowserMarker(leaf),
 	}, nil
+}
+
+func hasBrowserMarker(c *x509.Certificate) bool {
+	for _, u := range c.URIs {
+		if u.String() == BrowserKindURI {
+			return true
+		}
+	}
+	return false
 }
 
 func hasClientAuth(c *x509.Certificate) bool {
@@ -121,7 +136,7 @@ func hasClientAuth(c *x509.Certificate) bool {
 func extractSPIFFE(c *x509.Certificate) (string, error) {
 	var found []string
 	for _, u := range c.URIs {
-		if u.Scheme == "spiffe" && u.Host == "hexxlock.com" && strings.HasPrefix(u.Path, "/device/") {
+		if u.Scheme == "spiffe" && u.Host == "example.com" && strings.HasPrefix(u.Path, "/device/") {
 			found = append(found, u.String())
 		}
 	}

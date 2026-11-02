@@ -61,7 +61,7 @@ func seedSession(t *testing.T, s *sessionStore, sub, email, token string) string
 // require the SPA to supply it.
 func TestSubmitRequestForwardsBearerAndBody(t *testing.T) {
 	sessions := newSessionStore()
-	cookie := seedSession(t, sessions, "user:abc", "abc@hexxlock.com", "id-token-XYZ")
+	cookie := seedSession(t, sessions, "user:abc", "abc@example.com", "id-token-XYZ")
 
 	fa, srv := newFakeAdmin(t, http.StatusCreated, `{"id":"req-1","state":"pending"}`)
 	g := newGrantsClient(srv.URL, nil, sessions)
@@ -117,7 +117,7 @@ func TestSubmitRequestUnauthWithoutSession(t *testing.T) {
 // no upstream call.
 func TestSubmitRequestValidates(t *testing.T) {
 	sessions := newSessionStore()
-	cookie := seedSession(t, sessions, "user:abc", "abc@hexxlock.com", "tok")
+	cookie := seedSession(t, sessions, "user:abc", "abc@example.com", "tok")
 	fa, srv := newFakeAdmin(t, http.StatusCreated, `{}`)
 	g := newGrantsClient(srv.URL, nil, sessions)
 
@@ -145,7 +145,7 @@ func TestSubmitRequestValidates(t *testing.T) {
 // request was malformed".
 func TestSubmitRequestUpstreamErrorReturns502(t *testing.T) {
 	sessions := newSessionStore()
-	cookie := seedSession(t, sessions, "user:abc", "abc@hexxlock.com", "tok")
+	cookie := seedSession(t, sessions, "user:abc", "abc@example.com", "tok")
 	// Point at a closed port — connection refused.
 	g := newGrantsClient("http://127.0.0.1:1", nil, sessions)
 
@@ -169,7 +169,7 @@ func TestSubmitRequestUpstreamErrorReturns502(t *testing.T) {
 // as POST.
 func TestGetRequestForwardsBearer(t *testing.T) {
 	sessions := newSessionStore()
-	cookie := seedSession(t, sessions, "user:abc", "abc@hexxlock.com", "id-token-XYZ")
+	cookie := seedSession(t, sessions, "user:abc", "abc@example.com", "id-token-XYZ")
 
 	fa, srv := newFakeAdmin(t, http.StatusOK, `{"id":"req-1","state":"approved","grant_id":"grant-7f"}`)
 	g := newGrantsClient(srv.URL, nil, sessions)
@@ -217,7 +217,7 @@ func TestGetRequestUnauthDoesntReachUpstream(t *testing.T) {
 // loop can stop without leaking owner-info via diverging error codes.
 func TestGetRequestRelays404(t *testing.T) {
 	sessions := newSessionStore()
-	cookie := seedSession(t, sessions, "user:abc", "abc@hexxlock.com", "tok")
+	cookie := seedSession(t, sessions, "user:abc", "abc@example.com", "tok")
 	_, srv := newFakeAdmin(t, http.StatusNotFound, `{"error":"request req-x not found"}`)
 	g := newGrantsClient(srv.URL, nil, sessions)
 
@@ -237,7 +237,7 @@ func TestGetRequestRelays404(t *testing.T) {
 // see other operators' requests because the proxy always re-stamps.
 func TestMyRequestsForwardsWithMineFilter(t *testing.T) {
 	sessions := newSessionStore()
-	cookie := seedSession(t, sessions, "user:abc", "abc@hexxlock.com", "id-token-XYZ")
+	cookie := seedSession(t, sessions, "user:abc", "abc@example.com", "id-token-XYZ")
 
 	fa, srv := newFakeAdmin(t, http.StatusOK, `[{"id":"r-1","state":"approved"}]`)
 	g := newGrantsClient(srv.URL, nil, sessions)
@@ -266,7 +266,7 @@ func TestMyRequestsForwardsWithMineFilter(t *testing.T) {
 // the upstream. This is defence-in-depth.
 func TestMyRequestsIgnoresSmuggledMineFalse(t *testing.T) {
 	sessions := newSessionStore()
-	cookie := seedSession(t, sessions, "user:abc", "abc@hexxlock.com", "tok")
+	cookie := seedSession(t, sessions, "user:abc", "abc@example.com", "tok")
 	fa, srv := newFakeAdmin(t, http.StatusOK, `[]`)
 	g := newGrantsClient(srv.URL, nil, sessions)
 
@@ -307,7 +307,7 @@ func TestMyRequestsUnauthDoesntReachUpstream(t *testing.T) {
 // call. Pass-through filter: ?limit.
 func TestMySessionsForwardsMineFilter(t *testing.T) {
 	sessions := newSessionStore()
-	cookie := seedSession(t, sessions, "user:abc", "abc@hexxlock.com", "id-token-XYZ")
+	cookie := seedSession(t, sessions, "user:abc", "abc@example.com", "id-token-XYZ")
 
 	fa, srv := newFakeAdmin(t, http.StatusOK, `[{"id":"sess-1","target_id":"t","active":true}]`)
 	g := newGrantsClient(srv.URL, nil, sessions)
@@ -358,7 +358,7 @@ func TestMySessionsUnauthDoesntReachUpstream(t *testing.T) {
 // SPA can render "session log unavailable" rather than failing.
 func TestMySessionsRelays503(t *testing.T) {
 	sessions := newSessionStore()
-	cookie := seedSession(t, sessions, "user:abc", "abc@hexxlock.com", "tok")
+	cookie := seedSession(t, sessions, "user:abc", "abc@example.com", "tok")
 	_, srv := newFakeAdmin(t, http.StatusServiceUnavailable, `{"error":"session log unavailable"}`)
 	g := newGrantsClient(srv.URL, nil, sessions)
 
@@ -378,7 +378,7 @@ func TestMySessionsRelays503(t *testing.T) {
 // the future).
 func TestGetRequestRejectsNestedPath(t *testing.T) {
 	sessions := newSessionStore()
-	cookie := seedSession(t, sessions, "user:abc", "abc@hexxlock.com", "tok")
+	cookie := seedSession(t, sessions, "user:abc", "abc@example.com", "tok")
 	fa, srv := newFakeAdmin(t, http.StatusOK, `{}`)
 	g := newGrantsClient(srv.URL, nil, sessions)
 

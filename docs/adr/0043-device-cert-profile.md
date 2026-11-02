@@ -29,7 +29,7 @@ Phase 4). Phase 3 ADDs a second mount + role + verifier:
 ### 3.a — Vault PKI mount `jess-device-ca`
 
 ```hcl
-# infrastructure-iac/datacenters/eu-west-1/vault/vault-jess-device-ca.tf
+# iac-repo/datacenters/eu-west-1/vault/vault-jess-device-ca.tf
 resource "vault_mount" "jess_device_ca" {
   path        = "jess-device-ca"
   type        = "pki"
@@ -65,7 +65,7 @@ resource "vault_pki_secret_backend_role" "jess_device_cert" {
   allow_subdomains = false
   allow_glob_domains = false
   allow_localhost = false
-  allowed_domains = ["device.hexxlock.com"]
+  allowed_domains = ["device.example.com"]
   enforce_hostnames = false
   client_flag = true
   server_flag = false  # client-cert only — Talon edge does NOT trust it as server
@@ -126,7 +126,7 @@ POST /device-cert
 ```
 
 CSR validation: `Common Name` ignored. `Subject Alternative Name` MUST
-carry `spiffe://hexxlock.com/device/<device_uuid>` (D-005 SPIFFE
+carry `spiffe://example.com/device/<device_uuid>` (D-005 SPIFFE
 naming). Mismatch → 422.
 
 ### 3.c — Attestation verifiers
@@ -180,7 +180,7 @@ spec:
   client_certificate_authentication:
     cert_authority_secret: jess-device-ca-bundle  # synced from Vault
     optional_client_certificate: false  # FAIL if no cert presented
-    require_san_uri_match: "spiffe://hexxlock.com/device/.*"
+    require_san_uri_match: "spiffe://example.com/device/.*"
 ```
 
 Talon's posture verifier reads the presented cert's SAN, fingerprint
@@ -196,7 +196,7 @@ augments with continuous probes (disk encryption, screen lock, etc).
 
 ### 3.e — Cert lifecycle
 
-- **Issuance**: HexxLock Access agent calls `/device-cert` on first
+- **Issuance**: device agent agent calls `/device-cert` on first
   install + on cert expiry warning (12h before exp).
 - **Rotation**: agent watches local cert NotAfter; at 12h-remaining
   triggers re-mint. Atomic swap on success; rollback on fail.
@@ -250,7 +250,7 @@ Operator Grafana dashboard `jess Device-Cert lifecycle` (Phase 8 scope).
 | Q1 | Per-platform verifier rollout order? | This ADR §3.c locks: Linux TPM → Android → Win TPM → App Attest → macOS MDM |
 | Q2 | TPM EK trust list source-of-truth? | Curate in `internal/attestation/tpm2/ek_roots.go`; refresh quarterly; document refresh runbook in Phase 9 |
 | Q3 | MDM selection (Jamf, Kandji, Mosyle, JumpCloud)? | Operator decision — defer to D-001 pending P-007 |
-| Q4 | Device-cert SAN canonical form? | `spiffe://hexxlock.com/device/<uuid>` (D-005); device_uuid is UUIDv4 |
+| Q4 | Device-cert SAN canonical form? | `spiffe://example.com/device/<uuid>` (D-005); device_uuid is UUIDv4 |
 | Q5 | Falcon-ID device registry? | New table `iam_devices(device_uuid, user_sub, tier, fingerprint, registered_at, last_seen_at)` — Phase 4 scope sibling MR |
 | Q6 | Phase 3.d enforcement mode at edge — fail-closed from day 1? | NO — ship in shadow mode for 2 weeks per Phase 5.b rollout doctrine, then flip to enforcing |
 

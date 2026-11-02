@@ -23,7 +23,7 @@
 //
 // Unlike tpm2-linux, Windows TPM attestation goes through the Platform
 // Crypto Provider (PCP) which wraps the TPM operations. The on-device
-// posture-agent (hexxlock-access, Windows build) produces:
+// posture-agent (device-agent, Windows build) produces:
 //
 //   - AKPublicBlob  — TPMT_PUBLIC bytes from AttestationParameters.Public
 //   - QuoteBlob     — TPMS_ATTEST bytes from TPM2_Quote

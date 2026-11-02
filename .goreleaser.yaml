@@ -1,0 +1,86 @@
+version: 2
+
+project_name: jess
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: jess-controller
+    main: ./cmd/jess-controller
+    binary: jess-controller
+    env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s -w]
+  - id: jess-worker
+    main: ./cmd/jess-worker
+    binary: jess-worker
+    env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s -w]
+  # Needs cmd/jess-web/web/dist from `pnpm build` (the release workflow runs it).
+  - id: jess-web
+    main: ./cmd/jess-web
+    binary: jess-web
+    env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s -w]
+  - id: jessctl
+    main: ./cmd/jessctl
+    binary: jessctl
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s -w]
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    # Some binaries are linux-only while others also ship for darwin.
+    allow_different_binary_count: true
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+# SPDX SBOM per archive (needs syft on PATH; the release workflow installs it).
+sboms:
+  - artifacts: archive
+    documents:
+      - "{{ .ArtifactName }}.spdx.json"
+    args: ["$artifact", "--output", "spdx-json=$document"]
+
+# Keyless cosign signature over the checksum file.
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - --yes
+      - --bundle=${signature}
+      - ${artifact}
+    output: true
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  prerelease: auto

@@ -47,7 +47,7 @@
 //	JESS_WEB_ADDR                  HTTP listen addr               default :7102
 //	JESS_WEB_TLS_CERT/KEY          optional TLS server cert
 //	JESS_WEB_DIAG_ADDR             diagnostics listener           default :7111
-//	JESS_OIDC_ISSUER               Falcon-ID issuer URL           default https://id.hexxlock.com
+//	JESS_OIDC_ISSUER               Falcon-ID issuer URL           default https://id.example.com
 //	JESS_OIDC_CLIENT_ID            OAuth client (svc-jess-web)    required
 //	JESS_OIDC_CLIENT_SECRET        Confidential-client secret     optional (public = "")
 //	JESS_OIDC_REDIRECT_URL         /auth/callback absolute URL    required (must match registered)
@@ -130,7 +130,7 @@ func main() {
 
 	// --- OIDC + sessions -------------------------------------------------
 	sessions := newSessionStore()
-	issuer := env("JESS_OIDC_ISSUER", "https://id.hexxlock.com")
+	issuer := env("JESS_OIDC_ISSUER", "https://id.example.com")
 	clientID := os.Getenv("JESS_OIDC_CLIENT_ID")
 	clientSecret := os.Getenv("JESS_OIDC_CLIENT_SECRET") // may be empty (public client)
 	redirectURL := os.Getenv("JESS_OIDC_REDIRECT_URL")

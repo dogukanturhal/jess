@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Browser Notifications helper — only fires when the operator opts in.
 //
 // Policy:

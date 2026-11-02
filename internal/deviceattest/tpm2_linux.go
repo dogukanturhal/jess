@@ -16,7 +16,7 @@
 // Server-side semantics
 // =====================
 // jess-controller never opens /dev/tpmrm0. The TPM operations happen on the
-// DEVICE (posture-agent in hexxlock-access). The controller receives:
+// DEVICE (posture-agent in device-agent). The controller receives:
 //
 //   - AKPublicBlob     — TPMT_PUBLIC serialised bytes of the Attestation Key.
 //   - QuoteBlob        — TPMS_ATTEST serialised quote produced by TPM2_Quote.
@@ -187,7 +187,7 @@ func (v *tpm2LinuxVerifier) Verify(ctx context.Context, req VerifyRequest) (Veri
 	// that NonceClient appears in the qualifying data (TPMS_ATTEST
 	// extraData field). Passing nil PCRs means we verify quote freshness
 	// and AK liveness without asserting specific PCR values — PCR state
-	// attestation is a Phase 3+ posture probe concern (hexxlock-access
+	// attestation is a Phase 3+ posture probe concern (device-agent
 	// posture-agent), not the enrollment handshake.
 	if err := akPublic.Verify(quote, nil, req.NonceClient); err != nil {
 		return VerifyResponse{}, fmt.Errorf(

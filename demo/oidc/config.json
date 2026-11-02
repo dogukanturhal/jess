@@ -1,0 +1,22 @@
+{
+  "interactiveLogin": false,
+  "httpServer": "NettyWrapper",
+  "tokenCallbacks": [
+    {
+      "issuerId": "demo",
+      "tokenExpiry": 3600,
+      "requestMappings": [
+        {
+          "requestParam": "client_id",
+          "match": "jess-demo",
+          "claims": {
+            "sub": "demo-operator",
+            "aud": ["jess-demo"],
+            "email": "operator@example.com",
+            "roles": ["demo-operator"]
+          }
+        }
+      ]
+    }
+  ]
+}

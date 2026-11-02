@@ -60,10 +60,10 @@ import (
 // Group/Version/Resource for the CRDs this reconciler manages.
 var (
 	GVRPending = schema.GroupVersionResource{
-		Group: "jess.hexxlock.com", Version: "v1alpha1", Resource: "jesspendingtargets",
+		Group: "jess.example.com", Version: "v1alpha1", Resource: "jesspendingtargets",
 	}
 	GVRTarget = schema.GroupVersionResource{
-		Group: "jess.hexxlock.com", Version: "v1alpha1", Resource: "jesstargets",
+		Group: "jess.example.com", Version: "v1alpha1", Resource: "jesstargets",
 	}
 )
 
@@ -348,17 +348,17 @@ func (r *Reconciler) promote(ctx context.Context, name string, u *unstructured.U
 	promotedSpec := stripPendingFields(spec)
 	jt := &unstructured.Unstructured{
 		Object: map[string]any{
-			"apiVersion": "jess.hexxlock.com/v1alpha1",
+			"apiVersion": "jess.example.com/v1alpha1",
 			"kind":       "JessTarget",
 			"metadata": map[string]any{
 				"name": name,
 				"labels": map[string]any{
-					"jess.hexxlock.com/promoted-from": "JessPendingTarget",
+					"jess.example.com/promoted-from": "JessPendingTarget",
 				},
 				"annotations": map[string]any{
-					"jess.hexxlock.com/source":        valueOrEmpty(spec, "source"),
-					"jess.hexxlock.com/source-ref":    valueOrEmpty(spec, "source_ref"),
-					"jess.hexxlock.com/discovered-at": valueOrEmpty(spec, "discovered_at"),
+					"jess.example.com/source":        valueOrEmpty(spec, "source"),
+					"jess.example.com/source-ref":    valueOrEmpty(spec, "source_ref"),
+					"jess.example.com/discovered-at": valueOrEmpty(spec, "discovered_at"),
 				},
 			},
 			"spec": promotedSpec,

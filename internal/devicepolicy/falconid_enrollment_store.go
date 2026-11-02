@@ -84,6 +84,8 @@ type falconIDEnrollRequest struct {
 	TPMKind         *string `json:"tpm_kind,omitempty"`
 	WitnessAdminSub *string `json:"witness_admin_sub,omitempty"`
 	WitnessSignedAt *string `json:"witness_signed_at,omitempty"` // RFC3339
+	// WitnessMethod is "passkey" or "otp" (see deviceattest.WitnessMethod*).
+	WitnessMethod string `json:"witness_method,omitempty"`
 	// System/machine hardware identity (DMI/SMBIOS), distinct from
 	// tpm_manufacturer. Omitted when empty; Falcon-ID stores '' for absent.
 	SerialNumber string `json:"serial_number,omitempty"`
@@ -114,6 +116,7 @@ type falconIDGetByEKResponse struct {
 	TPMManufacturer *string `json:"tpm_manufacturer,omitempty"`
 	TPMKind         *string `json:"tpm_kind,omitempty"`
 	WitnessAdminSub *string `json:"witness_admin_sub,omitempty"`
+	WitnessMethod   string  `json:"witness_method,omitempty"`
 	// Hardware identity columns (falcon-id-owned). Carried in the attest
 	// request's hardware block and persisted on first-enrollment; see the
 	// cross-repo iam_devices contract. Optional; empty when the agent could
@@ -277,6 +280,7 @@ func (s *FalconIDEnrollmentStore) Register(ctx context.Context, row deviceattest
 		now := row.EnrolledAt.UTC().Format(time.RFC3339)
 		req.WitnessSignedAt = &now
 	}
+	req.WitnessMethod = row.WitnessMethod
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -474,6 +478,7 @@ type falconIDGetByUUIDResponse struct {
 	TPMManufacturer *string `json:"tpm_manufacturer,omitempty"`
 	TPMKind         *string `json:"tpm_kind,omitempty"`
 	WitnessAdminSub *string `json:"witness_admin_sub,omitempty"`
+	WitnessMethod   string  `json:"witness_method,omitempty"`
 	// Hardware identity columns — see falconIDGetByEKResponse for provenance.
 	SerialNumber  string  `json:"serial_number,omitempty"`
 	Model         string  `json:"model,omitempty"`
@@ -567,6 +572,7 @@ func falconIDByUUIDRespToEnrolledDevice(r falconIDGetByUUIDResponse) (deviceatte
 	if r.WitnessAdminSub != nil {
 		d.WitnessAdminSub = *r.WitnessAdminSub
 	}
+	d.WitnessMethod = r.WitnessMethod
 	if r.EnrolledAt != "" {
 		t, err := time.Parse(time.RFC3339, r.EnrolledAt)
 		if err != nil {
@@ -610,6 +616,7 @@ func falconIDGetRespToEnrolledDevice(r falconIDGetByEKResponse) (deviceattest.En
 	if r.WitnessAdminSub != nil {
 		d.WitnessAdminSub = *r.WitnessAdminSub
 	}
+	d.WitnessMethod = r.WitnessMethod
 	if r.EnrolledAt != "" {
 		t, err := time.Parse(time.RFC3339, r.EnrolledAt)
 		if err != nil {

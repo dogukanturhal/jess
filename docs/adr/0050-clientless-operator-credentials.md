@@ -59,11 +59,11 @@ bound to the real subject.
 2. **Identity: a Talon-signed clientless-access assertion (JWT).** Talon (the
    IAP that authenticated the user) mints a short-lived JWT and jess verifies
    it against Talon's IAP identity-signer JWKS
-   (`https://internal.example.com/.well-known/jwks.json` — already published;
+   (`https://auth.internal.example.com/.well-known/jwks.json` — already published;
    jess already fetches JWKS for CAEP). The assertion is tightly scoped:
 
    ```
-   iss = https://internal.example.com         # Talon IAP signer
+   iss = https://auth.internal.example.com         # Talon IAP signer
    aud = https://jess.<...>/clientless          # jess only — not a general token
    sub = <Falcon-ID iam_users.id>               # the REAL user (recording binds here)
    sid = <Talon session UUID>                   # joins jess recording ↔ Talon audit

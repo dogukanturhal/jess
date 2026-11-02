@@ -8,7 +8,7 @@
 // Most operator-tier targets in jess's estate live as in-cluster Services:
 // CNPG Postgres clusters, MySQL pools, Redis primaries, internal HTTPS admin
 // surfaces. Each ships a v1.Service with a stable ClusterIP. Annotating it
-// with `jess.hexxlock.com/protocol=postgres|mysql|ssh|rdp|tcp` makes the
+// with `jess.example.com/protocol=postgres|mysql|ssh|rdp|tcp` makes the
 // service auto-onboard into the catalog with zero configmap edits.
 //
 // Watch-based: SharedInformer drives the cache; every Service add/update/
@@ -17,24 +17,24 @@
 //
 // Annotation surface:
 //
-//	jess.hexxlock.com/protocol         REQUIRED: ssh, postgres, mysql, rdp, tcp
-//	jess.hexxlock.com/port-name        OPTIONAL: name of Service.spec.ports[*]
+//	jess.example.com/protocol         REQUIRED: ssh, postgres, mysql, rdp, tcp
+//	jess.example.com/port-name        OPTIONAL: name of Service.spec.ports[*]
 //	                                   to use (default: first port; if multiple,
 //	                                   provider warns once + uses first)
-//	jess.hexxlock.com/criticality      OPTIONAL: low, medium, high, critical
+//	jess.example.com/criticality      OPTIONAL: low, medium, high, critical
 //	                                   (default: medium for in-cluster targets;
 //	                                   they typically live ≥ a node hop behind
 //	                                   meshed mTLS, not at the root of trust)
-//	jess.hexxlock.com/required-roles   OPTIONAL: comma-separated Falcon-ID role
+//	jess.example.com/required-roles   OPTIONAL: comma-separated Falcon-ID role
 //	                                   names (default: ["platform_admin"])
-//	jess.hexxlock.com/recorded         OPTIONAL: "true"/"false" (default: true)
-//	jess.hexxlock.com/database         OPTIONAL: default db/schema for DB targets
-//	jess.hexxlock.com/host-key         OPTIONAL: SSH authorized_keys line (for ssh)
-//	jess.hexxlock.com/host-key-ca-signed OPTIONAL: "true" → ADR 0044 CA mode
-//	jess.hexxlock.com/tags             OPTIONAL: comma-separated tags (appended
+//	jess.example.com/recorded         OPTIONAL: "true"/"false" (default: true)
+//	jess.example.com/database         OPTIONAL: default db/schema for DB targets
+//	jess.example.com/host-key         OPTIONAL: SSH authorized_keys line (for ssh)
+//	jess.example.com/host-key-ca-signed OPTIONAL: "true" → ADR 0044 CA mode
+//	jess.example.com/tags             OPTIONAL: comma-separated tags (appended
 //	                                             to the always-on ["k8s-service",
 //	                                             "ns:<ns>"])
-//	jess.hexxlock.com/region           OPTIONAL: multi-region scope
+//	jess.example.com/region           OPTIONAL: multi-region scope
 //
 // SSH targets need either host-key OR host-key-ca-signed=true — otherwise the
 // service is SKIPPED with a warn log + metric increment (mirrors the kubelet-
@@ -71,17 +71,17 @@ import (
 )
 
 const (
-	AnnotationProtocol        = "jess.hexxlock.com/protocol"
-	AnnotationPortName        = "jess.hexxlock.com/port-name"
-	AnnotationCriticality     = "jess.hexxlock.com/criticality"
-	AnnotationRequiredRoles   = "jess.hexxlock.com/required-roles"
-	AnnotationRecorded        = "jess.hexxlock.com/recorded"
-	AnnotationDatabase        = "jess.hexxlock.com/database"
-	AnnotationHostKey         = "jess.hexxlock.com/host-key"
-	AnnotationHostKeyCASigned = "jess.hexxlock.com/host-key-ca-signed"
-	AnnotationSSHLoginUser    = "jess.hexxlock.com/ssh-login-user"
-	AnnotationTags            = "jess.hexxlock.com/tags"
-	AnnotationRegion          = "jess.hexxlock.com/region"
+	AnnotationProtocol        = "jess.example.com/protocol"
+	AnnotationPortName        = "jess.example.com/port-name"
+	AnnotationCriticality     = "jess.example.com/criticality"
+	AnnotationRequiredRoles   = "jess.example.com/required-roles"
+	AnnotationRecorded        = "jess.example.com/recorded"
+	AnnotationDatabase        = "jess.example.com/database"
+	AnnotationHostKey         = "jess.example.com/host-key"
+	AnnotationHostKeyCASigned = "jess.example.com/host-key-ca-signed"
+	AnnotationSSHLoginUser    = "jess.example.com/ssh-login-user"
+	AnnotationTags            = "jess.example.com/tags"
+	AnnotationRegion          = "jess.example.com/region"
 )
 
 // Sink mirrors providers/kubernetes — narrowest interface from the Aggregator.
@@ -368,7 +368,7 @@ func (p *Provider) warnMultiPortOnce(key string) {
 		return
 	}
 	p.multiPortWarned[key] = struct{}{}
-	p.cfg.Logger.Printf("kubernetesservices: %s — multiple Service ports + no jess.hexxlock.com/port-name annotation; using ports[0]", key)
+	p.cfg.Logger.Printf("kubernetesservices: %s — multiple Service ports + no jess.example.com/port-name annotation; using ports[0]", key)
 }
 
 func (p *Provider) warnInvalidPortOnce(key, pinned string) {
@@ -378,5 +378,5 @@ func (p *Provider) warnInvalidPortOnce(key, pinned string) {
 		return
 	}
 	p.multiPortWarned[key+"|"+pinned] = struct{}{}
-	p.cfg.Logger.Printf("kubernetesservices: %s — jess.hexxlock.com/port-name=%q does not match any Service port; skipping", key, pinned)
+	p.cfg.Logger.Printf("kubernetesservices: %s — jess.example.com/port-name=%q does not match any Service port; skipping", key, pinned)
 }

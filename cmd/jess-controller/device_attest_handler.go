@@ -57,7 +57,7 @@ import (
 const deviceCertVaultMount = "jess-device-ca"
 
 // deviceCertVaultRole is the Vault PKI role for device certificate signing.
-// The role allows: CN = <user_sub>, URI SAN = spiffe://hexxlock.com/device/<uuid>,
+// The role allows: CN = <user_sub>, URI SAN = spiffe://example.com/device/<uuid>,
 // TTL up to 24h, max_ttl 30 days (renewed on re-attestation).
 const deviceCertVaultRole = "device-cert"
 
@@ -68,7 +68,7 @@ const deviceCertTTL = 24 * time.Hour
 
 // spiffeURIPrefix is the SPIFFE trust domain SAN prefix stamped into every
 // device cert per ADR 0040 D-005.
-const spiffeURIPrefix = "spiffe://hexxlock.com/device/"
+const spiffeURIPrefix = "spiffe://example.com/device/"
 
 // DeviceCertAttestHandler implements POST /device-cert/attest. It is an
 // http.Handler wrapper — non-matching requests are forwarded to next.
@@ -220,7 +220,7 @@ type AttestResponse struct {
 
 	// DeviceCertPEM is the PEM-encoded device certificate minted by
 	// jess-device-ca for this device. Validity: deviceCertTTL from now.
-	// CN = verified user_sub; URI SAN = spiffe://hexxlock.com/device/<uuid>.
+	// CN = verified user_sub; URI SAN = spiffe://example.com/device/<uuid>.
 	DeviceCertPEM string `json:"device_cert_pem"`
 
 	// SerialNumber is the Vault PKI serial number of the issued device cert.
@@ -481,7 +481,7 @@ func (h *DeviceCertAttestHandler) handleAttest(w http.ResponseWriter, r *http.Re
 // its own keypair and sends only a CSR, removing the private-key-in-transit risk.
 //
 // The CN is set to userSub (verified Falcon-ID sub); the SPIFFE URI SAN is
-// spiffe://hexxlock.com/device/<deviceUUID> per ADR 0040 D-005.
+// spiffe://example.com/device/<deviceUUID> per ADR 0040 D-005.
 // csrMatchesEK verifies the client CSR is well-formed, self-signed (proof the
 // caller holds the device private key), and carries the SAME public key as the
 // enrolled EK. This binds the issued cert to the device's key — the key the
@@ -541,10 +541,10 @@ func (h *DeviceCertAttestHandler) mintDeviceCert(
 			TTL:        deviceCertTTL,
 			// SPIFFE identity goes in a URI-type SAN (uri_sans), NOT alt_names.
 			// posture-signer's DeviceCertVerifier reads cert.URIs and matches
-			// spiffe://hexxlock.com/device/<uuid> against the heartbeat
+			// spiffe://example.com/device/<uuid> against the heartbeat
 			// device_uuid; an alt_names/DNS SAN would never appear there and
 			// every heartbeat would 403 with ErrSANMismatch. The Vault
-			// device-cert role allows_uri_sans = ["spiffe://hexxlock.com/device/*"].
+			// device-cert role allows_uri_sans = ["spiffe://example.com/device/*"].
 			URISans: []string{spiffeURI},
 		})
 	if signErr != nil {

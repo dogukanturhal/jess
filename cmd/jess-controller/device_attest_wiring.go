@@ -12,7 +12,7 @@ package main
 //	    /device-cert/attest returns 404.  Safe default for a cluster that
 //	    has not yet provisioned the jess-device-ca Vault PKI mount.
 //
-//	JESS_FALCONID_ISSUER                string, default "https://id.hexxlock.com"
+//	JESS_FALCONID_ISSUER                string, default "https://id.example.com"
 //	    Expected iss claim in every enrollment witness JWS.  Must match
 //	    the issuer used by Falcon-ID when it mints the witness JWS.
 //
@@ -79,7 +79,7 @@ func buildDeviceAttestHandler(
 
 	// JESS_FALCONID_ISSUER — iss claim expected in witness JWSes.
 	// JESS_FALCONID_JWKS_URL — where to fetch the OIDC signing key.
-	issuer := env("JESS_FALCONID_ISSUER", "https://id.hexxlock.com")
+	issuer := env("JESS_FALCONID_ISSUER", "https://id.example.com")
 	jwksURL := env("JESS_FALCONID_JWKS_URL", issuer+"/.well-known/jwks.json")
 
 	// JESS_FALCON_ID_INTERNAL_URL + a Falcon-ID s2s token source — the
@@ -172,7 +172,11 @@ func falconIDS2STokenSource() devicepolicy.TokenSource {
 // the handler can fall through to chain on EKCertPEM presence.
 func buildDeviceAttestRegistry(issuer, jwksURL string, enrollmentStore *devicepolicy.FalconIDEnrollmentStore) *deviceattest.Registry {
 	keyStore := falconid.NewFalconIDOperatorPublicKeyStore(jwksURL)
-	witnessVerifier := devicepolicy.NewWebAuthnWitnessVerifier(issuer, keyStore)
+	witnessVerifier := devicepolicy.NewWebAuthnWitnessVerifier(issuer, keyStore,
+		devicepolicy.WithWitnessAllowOTP(witnessAllowOTP()))
+	if witnessAllowOTP() {
+		log.Print("jess-controller: authenticator-app (OTP) witness fallback ENABLED (JESS_WITNESS_ALLOW_OTP=true)")
+	}
 
 	reg := deviceattest.NewRegistry()
 

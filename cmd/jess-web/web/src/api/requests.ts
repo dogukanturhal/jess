@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // JIT grant-request surface — backed by /api/requests on the Go server,
 // which proxies to the controller's admin port using the cookie-session's
 // Falcon-ID Bearer (see cmd/jess-web/grants.go).

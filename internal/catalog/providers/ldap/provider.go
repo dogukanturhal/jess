@@ -11,12 +11,12 @@
 // confirmed AD/LDAP is the canonical source for Windows hosts in every
 // surveyed legacy PAM stack (CyberArk DNA, BeyondTrust, Delinea Secret
 // Server, Teleport Desktop). For HexxLock's estate this is the right
-// shape — every Windows host (dc01, exchange-01, …) already exists as
+// shape — every Windows host (ad-dc, exchange-01, …) already exists as
 // an AD Computer object; one bind credential makes the whole fleet
 // auto-discoverable.
 //
 // Search shape (operator-configurable):
-//   - One or more search bases (e.g. `OU=Servers,DC=internal,DC=example,DC=com`)
+//   - One or more search bases (e.g. `OU=Servers,DC=internal,DC=hexxlock,DC=com`)
 //   - Default filter `(&(objectClass=computer)(!userAccountControl:1.2.840.113556.1.4.803:=2))`
 //     — Computer objects, NOT disabled (UF_ACCOUNTDISABLE bit 0x2).
 //   - Scope = sub (recurse) by default.
@@ -63,7 +63,7 @@ const DefaultFilter = "(&(objectClass=computer)(!userAccountControl:1.2.840.1135
 // Config carries all per-LDAP-source knobs. URL is required; everything
 // else has a safe default.
 type Config struct {
-	// URL is the LDAP endpoint — `ldaps://dc01.internal.example.com:636`
+	// URL is the LDAP endpoint — `ldaps://ad-dc.internal.example.com:636`
 	// or `ldap://...` (the provider rejects plaintext LDAP unless
 	// AllowPlaintext is explicit — bind credentials in cleartext is
 	// never a default).
@@ -76,7 +76,7 @@ type Config struct {
 	BindPassword string
 
 	// BaseDNs is the list of search bases. At least one entry required.
-	// Example: ["OU=Servers,DC=internal,DC=example,DC=com"]
+	// Example: ["OU=Servers,DC=internal,DC=hexxlock,DC=com"]
 	BaseDNs []string
 
 	// Filter overrides DefaultFilter. Use to scope to a specific OS or

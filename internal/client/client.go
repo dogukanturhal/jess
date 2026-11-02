@@ -86,3 +86,36 @@ func bridge(ctx context.Context, local net.Conn, controllerAddr string, tlsCfg *
 	_ = local.Close()
 	<-done
 }
+
+// Stdio brokers one session and pipes it to in/out instead of a local
+// listener, so jessctl can run as an OpenSSH ProxyCommand. Only session bytes
+// are ever written to out. On in EOF the upstream write side is half-closed
+// (when supported) and Stdio keeps draining the session until the controller
+// closes it; if the controller closes first, Stdio returns without waiting
+// for in (which may be a blocked terminal/pipe read).
+func Stdio(ctx context.Context, controllerAddr string, tlsCfg *tls.Config, req wire.OperatorRequest, in io.Reader, out io.Writer) error {
+	up, err := Dial(ctx, controllerAddr, tlsCfg, req)
+	if err != nil {
+		return err
+	}
+	return pipeStdio(ctx, up, in, out)
+}
+
+func pipeStdio(ctx context.Context, up net.Conn, in io.Reader, out io.Writer) error {
+	defer up.Close()
+	go func() {
+		<-ctx.Done()
+		_ = up.Close()
+	}()
+	go func() {
+		_, _ = io.Copy(up, in)
+		if cw, ok := up.(interface{ CloseWrite() error }); ok {
+			_ = cw.CloseWrite()
+		}
+	}()
+	_, err := io.Copy(out, up)
+	if ctx.Err() != nil {
+		return nil
+	}
+	return err
+}

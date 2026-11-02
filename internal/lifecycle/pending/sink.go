@@ -147,12 +147,12 @@ func (s *DiscoverySink) buildPendingCR(name, providerName string, t catalog.Targ
 		spec["tags"] = toAnySlice(t.Tags)
 	}
 	return &unstructured.Unstructured{Object: map[string]any{
-		"apiVersion": "jess.hexxlock.com/v1alpha1",
+		"apiVersion": "jess.example.com/v1alpha1",
 		"kind":       "JessPendingTarget",
 		"metadata": map[string]any{
 			"name": name,
 			"labels": map[string]any{
-				"jess.hexxlock.com/source": providerName,
+				"jess.example.com/source": providerName,
 			},
 		},
 		"spec": spec,
@@ -160,7 +160,7 @@ func (s *DiscoverySink) buildPendingCR(name, providerName string, t catalog.Targ
 }
 
 // pendingName derives a deterministic, DNS-1123-safe CR name from the provider +
-// target id. The target id (e.g. "ldap-dc01-ssh") is already mostly compliant;
+// target id. The target id (e.g. "ldap-ad-dc-ssh") is already mostly compliant;
 // this guarantees it. Empty result means the id sanitised to nothing → skip.
 func pendingName(providerName, targetID string) string {
 	base := targetID

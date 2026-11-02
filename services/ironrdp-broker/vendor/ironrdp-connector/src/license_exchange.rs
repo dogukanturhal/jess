@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-
 use core::fmt::Debug;
 use core::panic::RefUnwindSafe;
 use core::{fmt, mem};

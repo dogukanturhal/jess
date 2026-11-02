@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // rdpAvc444 — AVC444 true 4:4:4 chroma recombine (ADR 0059). EXPERIMENTAL.
 //
 // Builds on the Tier-2 H.264 path (rdpH264.ts / ADR 0053). When the broker

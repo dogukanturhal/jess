@@ -118,7 +118,7 @@ To minimise risk and time-to-shipped-cert, split into four sub-phases that each 
 
 ### 5j-1b — Controller-side attestation validation
 
-**Files:** `internal/admin/operator_cert.go` (`Signer` interface gains `ValidateAttestation(csr *x509.CertificateRequest) (*AttestationResult, error)`), `internal/admin/attestation/yubico.go` (new — pinned Yubico CA roots + intermediate-cache + verify), `internal/admin/attestation/policy.go` (new — `PINPolicyAlways` + `TouchPolicyAlways` enforcement), `infrastructure-iac/datacenters/eu-west-1/vault/vault-jess-pki.tf` (extend — add Vault PKI role `operator-cert-hardware`).
+**Files:** `internal/admin/operator_cert.go` (`Signer` interface gains `ValidateAttestation(csr *x509.CertificateRequest) (*AttestationResult, error)`), `internal/admin/attestation/yubico.go` (new — pinned Yubico CA roots + intermediate-cache + verify), `internal/admin/attestation/policy.go` (new — `PINPolicyAlways` + `TouchPolicyAlways` enforcement), `iac-repo/datacenters/eu-west-1/vault/vault-jess-pki.tf` (extend — add Vault PKI role `operator-cert-hardware`).
 
 **Sequence:**
 
@@ -256,7 +256,7 @@ The Windows lane is **new work**, not a tweak. Today `jessctl` is built for Linu
 | Sub-phase | Estimate | Blockers |
 |---|---|---|
 | 5j-1a | ~1 week | Windows CI lane (+2 days plumbing if no Windows builder exists today) |
-| 5j-1b | ~1.5 weeks | Vault PKI role `operator-cert-hardware` via infrastructure-iac MR (1-day TF + apply) |
+| 5j-1b | ~1.5 weeks | Vault PKI role `operator-cert-hardware` via iac-repo MR (1-day TF + apply) |
 | 5j-1c | ~1 week | Cross-OS PIN-prompt UX (`pinentry` on Linux, native dialogs on macOS / Windows) |
 | 5j-1d | ~1.5 weeks | 30-day soft-mode warn window must elapse before enforce flip — extends real wall-clock past the engineering estimate |
 

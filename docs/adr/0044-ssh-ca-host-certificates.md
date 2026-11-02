@@ -12,7 +12,7 @@ Today every SSH target in `internal/catalog/Target` carries a pinned
 `HostKey` field — the byte-exact authorized_keys-form public key that
 `internal/sshproxy.PinnedHostKey` compares against on every session
 open. The pinning is correct (constant-time, algorithm-locked) and
-caught the 2026-06-04 `dc01` host-key rotation cleanly. The problem
+caught the 2026-06-04 `ad-dc` host-key rotation cleanly. The problem
 is the cost-per-target:
 
 1. Operator SSH'es to the new host (or asks someone else to).
@@ -142,13 +142,13 @@ have never set this combination (all entries today pin
 
 ## Implementation surface
 
-### Terraform (`infrastructure-iac/datacenters/eu-west-1/vault/`)
+### Terraform (`iac-repo/datacenters/eu-west-1/vault/`)
 
 - `vault-jess-ssh-host-ca.tf` — new file. Declares:
   - `vault_mount.jess_ssh_host_ca` (type=ssh, path=jess-ssh-host-ca)
   - `vault_ssh_secret_backend_ca.jess_ssh_host_ca` (`generate_signing_key=true`)
   - `vault_ssh_secret_backend_role.jess_ssh_host` (allow_host_certificates=true,
-    allowed_domains=internal.hexxlock.com,internal.example.com,hexxlock.com,
+    allowed_domains=internal.example.com,internal.example.com,example.com,
     allow_subdomains=true, ttl=8760h)
   - `vault_policy.jess_ssh_host_ca_worker` (read public_key)
   - `vault_policy.jess_ssh_host_ca_signer` (sign + read public_key,
@@ -176,7 +176,7 @@ have never set this combination (all entries today pin
 - `internal/catalog/target.go` — adds `HostKeyCASigned bool`.
 - `internal/catalog/providers/jesstargetcrd/provider.go` — reads
   `spec.host_key_ca_signed` from unstructured.
-- `deploy/crd/jesstargets.jess.hexxlock.com.yaml` — adds
+- `deploy/crd/jesstargets.jess.example.com.yaml` — adds
   `host_key_ca_signed: boolean (default false)` to the spec schema.
 - `cmd/jess-worker/vault_wiring.go`:
   - `loadSSHHostCAPublicKey()` — reads from

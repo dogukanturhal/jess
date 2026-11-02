@@ -258,3 +258,40 @@ func TestRenew_NonMatchingPathPassesThrough(t *testing.T) {
 		t.Fatalf("status=%d want passthrough 404", rec.Code)
 	}
 }
+
+func TestRenew_OTPWitnessAgeCap(t *testing.T) {
+	ca, caKey := renewCA(t)
+	cases := []struct {
+		name   string
+		method string
+		age    time.Duration
+		want   int
+	}{
+		{"otp within cap renews", "otp", 24 * time.Hour, http.StatusOK},
+		{"otp past cap denied", "otp", 721 * time.Hour, http.StatusForbidden},
+		{"passkey past cap renews", "passkey", 2000 * time.Hour, http.StatusOK},
+		{"legacy (no method) past cap renews", "", 2000 * time.Hour, http.StatusOK},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			captured := map[string]any{}
+			lookup := stubLookup{dev: deviceattest.EnrolledDevice{
+				DeviceUUID: renewTestUUID, WitnessMethod: tc.method,
+				EnrolledAt: time.Now().Add(-tc.age),
+			}}
+			h := newHandlerWithLookup(t, ca, mockVault(t, &captured), lookup)
+			rec := doRenew(t, h, ca, caKey)
+			if rec.Code != tc.want {
+				t.Fatalf("status=%d want %d body=%s", rec.Code, tc.want, rec.Body.String())
+			}
+			if tc.want == http.StatusForbidden {
+				if !strings.Contains(rec.Body.String(), "re-enroll required") {
+					t.Errorf("403 body must say re-enroll required: %s", rec.Body.String())
+				}
+				if len(captured) != 0 {
+					t.Errorf("denied renewal must not reach Vault sign")
+				}
+			}
+		})
+	}
+}

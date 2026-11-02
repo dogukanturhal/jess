@@ -195,7 +195,7 @@ Catalog manifest example:
 Same shape in the JessTarget CRD (5j-5e):
 
 ```yaml
-apiVersion: jess.hexxlock.com/v1
+apiVersion: jess.example.com/v1
 kind: JessTarget
 spec:
   workerFilter: 'has_tag("region","eu-west-1") && has_tag("env","prod")'

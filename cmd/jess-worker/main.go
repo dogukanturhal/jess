@@ -18,9 +18,9 @@
 //
 //	JESS_SPIRE_SVID          "1"/"true" to prefer SPIRE X.509-SVID mTLS  default off
 //	JESS_SPIRE_SOCKET        SPIRE Agent Workload API address  default unix:///spiffe-workload-api/spire-agent.sock
-//	JESS_SPIRE_TRUST_DOMAIN  SPIFFE trust domain               default prod.hexxlock
+//	JESS_SPIRE_TRUST_DOMAIN  SPIFFE trust domain               default prod.example
 //	JESS_SPIRE_CONTROLLER_ID controller SPIFFE ID the worker pins (AuthorizeID)
-//	                         default spiffe://prod.hexxlock/ns/jess/sa/jess/controller
+//	                         default spiffe://prod.example/ns/jess/sa/jess/controller
 //
 // The SVID path activates ONLY when SPIRE is deployed (Workload API socket
 // present) AND JESS_SPIRE_SVID is on; otherwise the worker stays on file-PEM and

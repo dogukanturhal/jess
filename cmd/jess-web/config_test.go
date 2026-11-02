@@ -12,7 +12,7 @@ import (
 
 func TestConfigHandlerReturnsConfigJSON(t *testing.T) {
 	cfg := WebConfig{
-		RecordingConsoleURL: "https://internal.example.com/browser/audit-archive",
+		RecordingConsoleURL: "https://console.internal.example.com/browser/audit-archive",
 		AppEnv:              "prod",
 	}
 	h := configHandler(cfg)
@@ -55,7 +55,7 @@ func TestLoadWebConfigTrimsTrailingSlash(t *testing.T) {
 	// The SPA appends "/<encoded-key>" to the base URL. A trailing
 	// slash in the env would cause "//<key>" which some MinIO Console
 	// versions normalise + others don't — strip at load time.
-	t.Setenv("JESS_WEB_RECORDING_CONSOLE_URL", "https://internal.example.com/browser/audit-archive/")
+	t.Setenv("JESS_WEB_RECORDING_CONSOLE_URL", "https://console.internal.example.com/browser/audit-archive/")
 	cfg := loadWebConfig()
 	if strings.HasSuffix(cfg.RecordingConsoleURL, "/") {
 		t.Errorf("trailing slash should be trimmed, got %q", cfg.RecordingConsoleURL)

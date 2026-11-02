@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // SPA runtime config — Phase 5e-9. Fetched once on mount, cached by
 // the browser per the server's Cache-Control: private, max-age=300.
 // Loading state on the wider UI is intentionally NOT shown (the

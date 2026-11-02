@@ -1,0 +1,272 @@
+# Jess demo: one brokered, recorded SSH session on a laptop.
+#
+# Development credentials only. Everything here uses fixed throwaway secrets
+# and a Vault dev server; do not expose these ports and do not reuse the
+# file as a deployment template. Steps are in demo/README.md.
+#
+# Networks: the operator container can reach the controller, the OIDC mock and
+# Vault (to get an SSH certificate), but NOT the SSH or Postgres targets. Only
+# the worker can. That is the property the broker exists to give you.
+
+name: jess-demo
+
+x-jess: &jess
+  build:
+    context: ..
+    dockerfile: Dockerfile
+    target: demo
+  image: jess-demo:local
+
+services:
+  vault:
+    image: hashicorp/vault:1.18
+    command: ["server", "-dev", "-dev-root-token-id=root", "-dev-listen-address=0.0.0.0:8200"]
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+    cap_add: [IPC_LOCK]
+    ports:
+      - "127.0.0.1:8200:8200" # only to verify recording signatures from the host
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [operator-net, backend]
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: demo-minio
+      MINIO_ROOT_PASSWORD: demo-minio-secret
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+
+  # Creates the recording bucket with Object Lock enabled. It has to be
+  # enabled when the bucket is created; the worker cannot turn it on later.
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mc alias set local http://minio:9000 demo-minio demo-minio-secret &&
+        mc mb --with-lock --ignore-existing local/audit-archive
+    networks: [backend]
+
+  # Grants, sessions and the audit chain live here. The controller and the
+  # worker must share it.
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: jess
+      POSTGRES_PASSWORD: jess-demo
+      POSTGRES_DB: jess
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jess -d jess"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+
+  # A mock OIDC server that hands out a token for one fixed operator.
+  # Not Falcon-ID: any issuer that puts `roles` in the token works.
+  oidc:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    environment:
+      JSON_CONFIG_PATH: /config/config.json
+    volumes:
+      - ./oidc/config.json:/config/config.json:ro
+    networks: [operator-net]
+
+  # The SSH target. Trusts the user CA written by `setup`.
+  target-ssh:
+    build: ./target-ssh
+    image: jess-demo-target-ssh:local
+    volumes:
+      - shared:/shared:ro
+    networks: [backend]
+
+  # The Postgres target. TLS is on because the worker connects with
+  # sslmode=require. Vault creates a short-lived role in it per session.
+  target-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: target-admin-demo
+      POSTGRES_DB: demo
+    volumes:
+      - ./target-postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        openssl req -new -x509 -days 30 -nodes -subj /CN=target-postgres \
+          -keyout /var/lib/postgresql/server.key -out /var/lib/postgresql/server.crt
+        chown postgres:postgres /var/lib/postgresql/server.key /var/lib/postgresql/server.crt
+        chmod 600 /var/lib/postgresql/server.key
+        exec docker-entrypoint.sh postgres -c ssl=on \
+          -c ssl_cert_file=/var/lib/postgresql/server.crt \
+          -c ssl_key_file=/var/lib/postgresql/server.key
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d demo"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+
+  # One-shot: configures Vault (SSH CA, transit key, database engine,
+  # policies), makes the TLS certificates, the SSH keys and the target list.
+  setup:
+    <<: *jess
+    command: ["/demo/setup.sh"]
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: root
+    volumes:
+      - shared:/shared
+      - ./scripts:/demo:ro
+    depends_on:
+      vault:
+        condition: service_healthy
+      target-postgres:
+        condition: service_healthy
+    networks: [backend]
+
+  controller:
+    <<: *jess
+    command: ["jess-controller"]
+    restart: on-failure
+    environment:
+      JESS_WORKER_ADDR: ":7100"
+      JESS_OPERATOR_ADDR: ":7101"
+      JESS_TLS_CERT: /shared/tls/controller.crt
+      JESS_TLS_KEY: /shared/tls/controller.key
+      JESS_TLS_CA: /shared/tls/ca.crt
+      JESS_TARGETS: /shared/targets.json
+      JESS_OIDC_ISSUER: http://oidc:8080/demo
+      JESS_OIDC_CLIENT_ID: jess-demo
+      JESS_DB_DSN: postgres://jess:jess-demo@postgres:5432/jess?sslmode=disable
+    volumes:
+      - shared:/shared:ro
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      oidc:
+        condition: service_started
+    ports:
+      - "127.0.0.1:7109:7109" # /metrics /healthz /readyz
+    networks: [operator-net, backend]
+
+  worker:
+    <<: *jess
+    # worker.env carries the Vault token and the SSH CA public key, both of
+    # which are only known after `setup` has run.
+    command: ["sh", "-c", "mkdir -p /tmp/jess-recording-spool && . /shared/worker.env && exec jess-worker"]
+    restart: on-failure
+    environment:
+      JESS_CONTROLLER_ADDR: controller:7100
+      JESS_WORKER_ID: worker-1
+      JESS_SERVER_NAME: controller
+      JESS_TLS_CERT: /shared/tls/worker.crt
+      JESS_TLS_KEY: /shared/tls/worker.key
+      JESS_TLS_CA: /shared/tls/ca.crt
+      JESS_TARGETS: /shared/targets.json
+      JESS_DB_DSN: postgres://jess:jess-demo@postgres:5432/jess?sslmode=disable
+      JESS_VAULT_ADDR: http://vault:8200
+      JESS_SSH_VAULT_MOUNT: ssh-client-signer
+      JESS_SSH_VAULT_ROLE: ssh-admin
+      JESS_SSH_LOGIN_USER: demo
+      JESS_DB_VAULT_MOUNT: database
+      JESS_DB_VAULT_ROLE: demo-postgres
+      JESS_REC_S3_ENDPOINT: minio:9000
+      JESS_REC_S3_ACCESS_KEY: demo-minio
+      JESS_REC_S3_SECRET_KEY: demo-minio-secret
+      JESS_REC_S3_BUCKET: audit-archive
+      JESS_REC_S3_USE_SSL: "false"
+      # GOVERNANCE so a developer can clear the demo volume; production
+      # should use COMPLIANCE.
+      JESS_REC_S3_MODE: GOVERNANCE
+      JESS_REC_RETENTION: 1h
+      JESS_REC_TRANSIT_MOUNT: transit
+      JESS_REC_TRANSIT_KEY: jess-recordings
+      JESS_REC_SPOOL_DIR: /tmp/jess-recording-spool
+      JESS_CATALOG_PROBE_INTERVAL: 24h
+    volumes:
+      - shared:/shared:ro
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      controller:
+        condition: service_started
+      target-ssh:
+        condition: service_started
+    networks: [backend]
+
+  # --- helpers, run with `docker compose run --rm <name>` -------------------
+
+  # Inserts one-hour grants for the demo operator (one per target). Stand-in
+  # for the request/approve flow, so the demo does not need the admin API.
+  # Safe to run again: it extends the expiry.
+  grant:
+    image: postgres:16-alpine
+    profiles: [tools]
+    environment:
+      PGPASSWORD: jess-demo
+    entrypoint: ["psql", "-h", "postgres", "-U", "jess", "-d", "jess", "-v", "ON_ERROR_STOP=1"]
+    command:
+      - -c
+      - |
+        INSERT INTO jit_grants (id, subject, target_id, approved_by, expires_at) VALUES
+          ('demo-grant',    'demo-operator', 'demo-ssh',      'demo', now() + interval '1 hour'),
+          ('demo-grant-db', 'demo-operator', 'demo-postgres', 'demo', now() + interval '1 hour')
+        ON CONFLICT (id) DO UPDATE SET expires_at = EXCLUDED.expires_at
+        RETURNING id, subject, target_id, expires_at
+    depends_on:
+      controller:
+        condition: service_started
+    networks: [backend]
+
+  # The operator's shell: gets a token from the OIDC mock, an SSH certificate
+  # from Vault, then runs ssh through `jessctl connect --stdio`.
+  operator:
+    <<: *jess
+    profiles: [tools]
+    entrypoint: ["/demo/operator.sh"]
+    environment:
+      JESS_CONTROLLER: controller:7101
+    volumes:
+      - shared:/shared:ro
+      - ./scripts:/demo:ro
+    stdin_open: true
+    tty: true
+    depends_on:
+      controller:
+        condition: service_started
+    networks: [operator-net]
+
+  # MinIO client for listing and reading recordings.
+  mc:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    profiles: [tools]
+    entrypoint: ["mc"]
+    environment:
+      MC_HOST_local: http://demo-minio:demo-minio-secret@minio:9000
+    networks: [backend]
+
+networks:
+  operator-net: {}
+  backend: {}
+
+volumes:
+  shared: {}

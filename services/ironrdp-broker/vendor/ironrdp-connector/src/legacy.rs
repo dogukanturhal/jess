@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-
 use std::borrow::Cow;
 
 use ironrdp_core::{Decode, Encode, WriteBuf, decode, encode_vec};

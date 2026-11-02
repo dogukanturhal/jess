@@ -28,7 +28,7 @@ witness, no GUI dependency.
 ### Renewal endpoint — `POST /device-cert/renew` (jess-controller)
 
 - Reached over **Envoy device-cert mTLS** (NOT the Talon-fronted attest
-  admin port). Reuses the posture topology: agent → `posture.hexxlock.com`
+  admin port). Reuses the posture topology: agent → `posture.example.com`
   (Traefik TLS-passthrough) → Envoy `posture-mtls` listener (clientValidation
   vs `jess-device-ca` + XFCC SanitizeSet, `Cert` included) → jess-controller.
   A path rule `/device-cert/renew` on the existing HTTPRoute routes to a NEW
@@ -39,7 +39,7 @@ witness, no GUI dependency.
   rollout-restart caveat).
 - Auth = the presented cert (XFCC): validate chain→`jess-device-ca`, not
   expired, `id-kp-clientAuth` EKU, extract `device_uuid` from the SPIFFE
-  SAN (`spiffe://hexxlock.com/device/<uuid>`) and `user_sub` from CN.
+  SAN (`spiffe://example.com/device/<uuid>`) and `user_sub` from CN.
 - Authz = device still enrolled + not revoked in `iam_devices`
   (falcon-id `/internal/v1/iam-devices/`), and the device cert not on the
   jess-device-ca CRL.
@@ -65,12 +65,12 @@ lifetime and revocation/CRL cuts a compromised device at the next attempt.
   POST a fresh CSR to the renew endpoint over the current-cert mTLS client.
 - On success: write `device-cert.pem` (+ key if rotated) **atomically**
   (temp + `rename`), rebuild the mTLS `HeartbeatClient`, continue. The agent
-  runs as the system user that owns `/var/lib/hexxlock-access`, so no pkexec.
+  runs as the system user that owns `/var/lib/device-agent`, so no pkexec.
 - On renew failure while the cert is still valid: log + retry next tick
   (non-fatal). Only emit the re-enroll signal once the cert is actually
   expired AND renewal has failed (genuine loss of identity).
 - Gated by `HEXXLOCK_DEVICE_RENEW_ENDPOINT` (default
-  `https://posture.hexxlock.com/device-cert/renew`); empty disables
+  `https://posture.example.com/device-cert/renew`); empty disables
   rotation (current behavior) for safe rollout.
 
 ### "Refresh cert" button / manual trigger
@@ -91,7 +91,7 @@ lifetime and revocation/CRL cuts a compromised device at the next attempt.
 3. the GitOps repository: HTTPRoute path `/device-cert/renew` → jess-controller
    + ReferenceGrant (jess ns) + jess-controller `linkerd.inbound.allowedCallers`
    = the EG data-plane SA.
-4. hexxlock-access: agent rotation module + Refresh-cert IPC; version bump.
+4. device-agent: agent rotation module + Refresh-cert IPC; version bump.
 5. Verify by forcing a short TTL (or `SIGUSR1`) and watching a clean
    rotation + uninterrupted heartbeats across the boundary.
 

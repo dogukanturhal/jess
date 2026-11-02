@@ -41,12 +41,12 @@ Five reference points fetched live (3 of 5 returned substantive content; 2 are f
 Three findings worth carrying:
 
 1. **k8s_psat is the only attestor that matches our threat model.** The deprecated `k8s_sat` (Service Account Token, non-projected) attestor was vulnerable to token theft and replay; PSAT binds to a specific audience and TTL via the Kubernetes ProjectedServiceAccountToken volume. The SPIRE project deprecated SAT in v1.0. **k8s_psat is mandatory.**
-2. **Trust domain choice is sticky once chosen.** Istio's docs flag trust-domain alignment as the #1 source of integration bugs. Once SPIRE Server is bootstrapped with `trust_domain: hexxlock.com`, changing it later requires bundle re-issuance for every workload + every federated peer. **Pick a trust domain that maps to the long-lived business identity, not the cluster name.**
+2. **Trust domain choice is sticky once chosen.** Istio's docs flag trust-domain alignment as the #1 source of integration bugs. Once SPIRE Server is bootstrapped with `trust_domain: example.com`, changing it later requires bundle re-issuance for every workload + every federated peer. **Pick a trust domain that maps to the long-lived business identity, not the cluster name.**
 3. **Linkerd + SPIRE coexist.** No documented conflict; the two systems operate on different unix sockets, mint different cert chains, and serve different consumers (Linkerd: mesh proxies; SPIRE: application workloads). The Istio + SPIRE pattern proves the model: a service mesh's *own* identity can coexist with SPIRE-issued workload identities. This is critical because jess pods are mesh-injected today.
 
 ## Decision
 
-**Adopt SPIRE Server (HA, Postgres-backed) + SPIRE Agent (DaemonSet, k8s_psat node-attestor) for jess worker↔controller mTLS.** Trust domain = `hexxlock.com` (matches the long-lived business root; not cluster-local). X.509-SVIDs only for Phase 5j-4 (JWT-SVID deferred — workers don't currently call HTTP APIs that need it). Rotation cadence = SPIRE default (1h SVID validity, refreshed at 50%).
+**Adopt SPIRE Server (HA, Postgres-backed) + SPIRE Agent (DaemonSet, k8s_psat node-attestor) for jess worker↔controller mTLS.** Trust domain = `example.com` (matches the long-lived business root; not cluster-local). X.509-SVIDs only for Phase 5j-4 (JWT-SVID deferred — workers don't currently call HTTP APIs that need it). Rotation cadence = SPIRE default (1h SVID validity, refreshed at 50%).
 
 Activation = flip `JESS_SPIFFE_SOCKET=/run/spire/agent.sock` on both `jess-controller` and `jess-worker` Deployments. The existing code path in `cmd/jess-controller/main.go` (and the symmetric one in the worker) handles the rest: `transport.SPIFFEServerConfig` + `peerSPIFFEIDFn` replace `transport.LoadServerConfig` + `peerCNFn` with zero code change required.
 
@@ -59,7 +59,7 @@ File-mount removal (`JESS_TLS_CERT/KEY/CA` + ExternalSecret `jess-controller-mtl
 - **Namespace**: new `spire` (or `spire-server`) namespace, cluster-wide infrastructure tier.
 - **Workload**: StatefulSet, 3 replicas (HA — quorum-tolerant 2/3 + leader election via the Postgres datastore).
 - **Datastore**: existing CNPG cluster `spire-pg` (new database `spire_server`); credentials minted via Crossplane `CNPGDatabaseClaim` like every other jess-tier service.
-- **Trust domain**: `hexxlock.com`. Bundle endpoint exposed via the Talon-fronted hostname `internal.example.com` (Talon IAP) for any future federated peers — for the single-cluster MVP, this is internal-only.
+- **Trust domain**: `example.com`. Bundle endpoint exposed via the Talon-fronted hostname `spire.internal.example.com` (Talon IAP) for any future federated peers — for the single-cluster MVP, this is internal-only.
 - **Plugins**:
   - `DataStore: sql` (Postgres).
   - `NodeAttestor: k8s_psat` with `clusters = { hxk1 = { audience = ["spire-server"], service_account_allow_list = ["spire/spire-agent"] } }`.
@@ -87,7 +87,7 @@ kind: ClusterSPIFFEID
 metadata:
   name: jess-controller
 spec:
-  spiffeIDTemplate: "spiffe://hexxlock.com/ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}"
+  spiffeIDTemplate: "spiffe://example.com/ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}"
   podSelector:
     matchLabels:
       app.kubernetes.io/name: jess-controller
@@ -100,7 +100,7 @@ kind: ClusterSPIFFEID
 metadata:
   name: jess-worker
 spec:
-  spiffeIDTemplate: "spiffe://hexxlock.com/ns/jess/sa/jess"
+  spiffeIDTemplate: "spiffe://example.com/ns/jess/sa/jess"
   podSelector:
     matchLabels:
       app.kubernetes.io/name: jess-worker
@@ -113,7 +113,7 @@ kind: ClusterSPIFFEID
 metadata:
   name: jess-web
 spec:
-  spiffeIDTemplate: "spiffe://hexxlock.com/ns/jess/sa/jess"
+  spiffeIDTemplate: "spiffe://example.com/ns/jess/sa/jess"
   podSelector:
     matchLabels:
       app.kubernetes.io/name: jess-web
@@ -122,7 +122,7 @@ spec:
       kubernetes.io/metadata.name: jess
 ```
 
-All three jess pods today run as SA `jess` in namespace `jess` — the SPIFFE ID `spiffe://hexxlock.com/ns/jess/sa/jess` is intentionally shared across controller / worker / web. The `peerSPIFFEIDFn` enforces SPIFFE ID membership (allow-list), not pod-distinction; this matches the Istio sidecar pattern (every sidecar in `ns/sa` gets the same SPIFFE ID, mesh-level auth distinguishes nothing finer).
+All three jess pods today run as SA `jess` in namespace `jess` — the SPIFFE ID `spiffe://example.com/ns/jess/sa/jess` is intentionally shared across controller / worker / web. The `peerSPIFFEIDFn` enforces SPIFFE ID membership (allow-list), not pod-distinction; this matches the Istio sidecar pattern (every sidecar in `ns/sa` gets the same SPIFFE ID, mesh-level auth distinguishes nothing finer).
 
 If finer distinction is needed later (e.g. limit `jess-web` from calling `jess-worker` admin port), introduce per-component SAs (`jess-controller`, `jess-worker`, `jess-web`) and register each with a distinct SPIFFE ID. Out of scope for Phase 5j-4.
 
@@ -141,7 +141,7 @@ if sock := os.Getenv("JESS_SPIFFE_SOCKET"); sock != "" {
 }
 ```
 
-Phase 5j-4d sets `JESS_SPIFFE_SOCKET=/run/spire/agent.sock` and `JESS_SPIFFE_ALLOWED_IDS=spiffe://hexxlock.com/ns/jess/sa/jess` on both Deployments via the the GitOps repository Helm values. The `go-spiffe` library handles socket reconnect, SVID refresh, and trust-bundle updates in-process — no pod restart on rotation, fail-closed on socket unavailable (the next handshake errors out cleanly, surfaced via the existing `talon_request_total{result="tls_error"}` analog on the jess side).
+Phase 5j-4d sets `JESS_SPIFFE_SOCKET=/run/spire/agent.sock` and `JESS_SPIFFE_ALLOWED_IDS=spiffe://example.com/ns/jess/sa/jess` on both Deployments via the the GitOps repository Helm values. The `go-spiffe` library handles socket reconnect, SVID refresh, and trust-bundle updates in-process — no pod restart on rotation, fail-closed on socket unavailable (the next handshake errors out cleanly, surfaced via the existing `talon_request_total{result="tls_error"}` analog on the jess side).
 
 ### Mount pattern
 
@@ -165,15 +165,15 @@ NOTE: hostPath requires the pod's SecurityContext to permit it. The existing `je
 
 SPIRE Server's `Notifier: k8sbundle` plugin publishes the trust bundle to ConfigMap `spire/spire-bundle` on every bundle change. Consumer pods don't need to mount this ConfigMap directly — the `go-spiffe` Workload API client receives bundle updates live over the agent unix socket. **No explicit trust bundle wiring required on the jess side**; the SPIFFE library handles it.
 
-The ConfigMap is published anyway as the off-cluster federation hook for future use (cross-trust-domain peers fetch it via the Talon-fronted `internal.example.com/.well-known/spiffe-bundle` endpoint).
+The ConfigMap is published anyway as the off-cluster federation hook for future use (cross-trust-domain peers fetch it via the Talon-fronted `spire.internal.example.com/.well-known/spiffe-bundle` endpoint).
 
 ## Implementation slices
 
 ### 5j-4a — SPIRE Server StatefulSet + Postgres + ESO
 
-**Files** (the GitOps repository or new `infrastructure-iac` chart):
+**Files** (the GitOps repository or new `iac-repo` chart):
 - `the GitOps repository/apps/spire-server/Chart.yaml` + `values.yaml` + templates.
-- `infrastructure-iac/datacenters/eu-west-1/vault/vault-spire-pki.tf` — Vault PKI mount `spire-ca` + role `spire-server-upstream` (extends `gitlab-infra-iac-vault-admin` policy per the standing pattern — cross-ref MEMORY.md feedback on policy coverage).
+- `iac-repo/datacenters/eu-west-1/vault/vault-spire-pki.tf` — Vault PKI mount `spire-ca` + role `spire-server-upstream` (extends `gitlab-infra-iac-vault-admin` policy per the standing pattern — cross-ref MEMORY.md feedback on policy coverage).
 - `the GitOps repository/apps/spire-server/templates/cnpg-cluster.yaml` — CNPG `Cluster` `spire-pg` (3-instance, NVMe storage, 7-day PITR — same shape as `example-app-pg`).
 - ESO `ExternalSecret` for `spire-server` to mount the Vault PKI upstream signing key + DB creds.
 - ArgoCD `Application` declared in `<gitops-bootstrap-repo>/argocd/apps/spire-server.yaml` (no syncWindow — infrastructure tier matches the falcon-id pattern).
@@ -203,7 +203,7 @@ The ConfigMap is published anyway as the off-cluster federation hook for future 
 ### 5j-4c — Registration entries for jess workloads
 
 **Files**:
-- `the GitOps repository/apps/spire-server/templates/clusterspiffeids.yaml` — three `ClusterSPIFFEID` resources (controller, worker, web — all resolving to `spiffe://hexxlock.com/ns/jess/sa/jess`).
+- `the GitOps repository/apps/spire-server/templates/clusterspiffeids.yaml` — three `ClusterSPIFFEID` resources (controller, worker, web — all resolving to `spiffe://example.com/ns/jess/sa/jess`).
 - SPIRE Controller Manager already-deployed in 5j-4a (sub-chart of SPIRE Server chart).
 
 **Acceptance**:
@@ -216,7 +216,7 @@ The ConfigMap is published anyway as the off-cluster federation hook for future 
 ### 5j-4d — Flip jess-controller + jess-worker to SPIFFE
 
 **Files**:
-- `the GitOps repository/apps/jess/values.yaml` — add `JESS_SPIFFE_SOCKET=/run/spire/agent.sock` + `JESS_SPIFFE_ALLOWED_IDS=spiffe://hexxlock.com/ns/jess/sa/jess` env on both Deployments.
+- `the GitOps repository/apps/jess/values.yaml` — add `JESS_SPIFFE_SOCKET=/run/spire/agent.sock` + `JESS_SPIFFE_ALLOWED_IDS=spiffe://example.com/ns/jess/sa/jess` env on both Deployments.
 - Add the hostPath volume + mount.
 - KEEP `JESS_TLS_CERT/KEY/CA` env vars for now — the code path is `if SPIFFE_SOCKET set, prefer SPIFFE; else fall back to file mount`. Belt-and-braces during cutover.
 
@@ -226,7 +226,7 @@ The ConfigMap is published anyway as the off-cluster federation hook for future 
 - `kubectl logs jess-controller -- | grep SPIFFE` shows `using SPIFFE workload identity` at startup.
 - Cert rotation observed: `openssl s_client -connect controller:7102` shows a different cert serial after ~35min, with no pod restart.
 
-**Risk**: Trust-domain typo silently breaks `peerSPIFFEIDFn` — the worker handshake succeeds at the TLS layer (cert is signed by the right SPIRE CA) but the SPIFFE-ID allow-list rejects. **Mitigate** with a pre-flip dry-run: a debug pod runs `peerSPIFFEIDFn(["spiffe://hexxlock.com/ns/jess/sa/jess"])` against a manually-issued SVID and asserts accept-path works.
+**Risk**: Trust-domain typo silently breaks `peerSPIFFEIDFn` — the worker handshake succeeds at the TLS layer (cert is signed by the right SPIRE CA) but the SPIFFE-ID allow-list rejects. **Mitigate** with a pre-flip dry-run: a debug pod runs `peerSPIFFEIDFn(["spiffe://example.com/ns/jess/sa/jess"])` against a manually-issued SVID and asserts accept-path works.
 
 ### 5j-4e — Remove file-mount substrate (post-soak)
 
@@ -295,7 +295,7 @@ The SPIFFE CSI driver mounts the agent socket via a CSI volume rather than hostP
 | **SPIRE Server down (all 3 replicas)** | Agents serve cached SVIDs until expiry (1h); after 1h, new SVIDs can't mint; existing TLS connections keep working (cached SVIDs survive in-process) but new connections fail. | HA 3-replica StatefulSet + PDB `minAvailable: 2`. Postgres CNPG with 3-instance quorum prevents single-DB failure from taking out the SPIRE control plane. Soak alert on `spire_server_up == 0` at the <gitops-bootstrap-repo> monitoring tier. |
 | **SPIRE Agent down on a node** | Pods on that node can't get fresh SVIDs; existing TLS connections keep working until cert expiry (1h); after 1h, the worker can't handshake new sessions and the pod's session-open success rate drops. | DaemonSet has tight readiness probe; `node-problem-detector` surfaces socket-down. Application-side `jess_spiffe_peer_id_rejected_total` will tick on the controller side. Operator alert + rolling restart of the agent DaemonSet recovers within seconds. |
 | **Registration entry typo (wrong selector)** | Affected workload pod can't get an SVID at all; pod logs `failed to fetch x509 svid: no identity issued`; the jess process panics at startup (current behaviour for missing TLS material). | Pre-merge: chart values unit test asserts label↔selector alignment. Post-merge: same `SPIRESVIDRotationStalled` alert catches a workload that never mints an SVID. |
-| **Trust-domain mismatch (server says `hexxlock.com`, allow-list says `hexxlock.local`)** | Peer cert is valid X.509 but SPIFFE-ID allow-list rejects; handshakes 100% fail. | Pre-flip dry-run in 5j-4d (debug pod confirms allow-list works). Single config source-of-truth in Helm values (`global.spiffe.trustDomain`) shared between SPIRE Server config + jess env. |
+| **Trust-domain mismatch (server says `example.com`, allow-list says `example.local`)** | Peer cert is valid X.509 but SPIFFE-ID allow-list rejects; handshakes 100% fail. | Pre-flip dry-run in 5j-4d (debug pod confirms allow-list works). Single config source-of-truth in Helm values (`global.spiffe.trustDomain`) shared between SPIRE Server config + jess env. |
 | **Postgres datastore corruption / data loss** | SPIRE Server can't bootstrap; all entries lost; every workload re-attests from scratch on next agent reconnect. | CNPG nightly base backup + WAL streaming to MinIO (same pattern as every other CNPG cluster). Recovery RTO ~30min. Bundle re-issuance is automatic on Postgres restore (entries are declarative via ClusterSPIFFEID — re-applied by SPIRE Controller Manager). |
 | **Linkerd identity rotation collides with SPIRE rotation** | None — different sockets, different chains. Not actually a failure mode; listed for completeness. | n/a |
 
@@ -326,7 +326,7 @@ The SPIFFE CSI driver mounts the agent socket via a CSI volume rather than hostP
 ## Open questions
 
 1. **Linkerd integration — replace or coexist?** Phase 5j-4 assumes coexist (Linkerd handles mesh-proxy TLS via its own CA, SPIRE handles application TLS for jess). The alternative is to replace `linkerd-identity` with SPIRE — Linkerd has community patterns for this but it's not first-class. **Recommend coexist for now**; revisit if Linkerd's manual trust-anchor rotation becomes operationally painful.
-2. **Trust domain choice — `hexxlock.com` vs `hexxlock.local` vs cluster-name?** Phase 5j-4 picks `hexxlock.com` (matches the long-lived business identity). Counterargument: if we ever federate across customer-tenant boundaries, a cluster-scoped name might be cleaner. **Recommend `hexxlock.com`** — federation comes later and federation specifically supports cross-trust-domain.
+2. **Trust domain choice — `example.com` vs `example.local` vs cluster-name?** Phase 5j-4 picks `example.com` (matches the long-lived business identity). Counterargument: if we ever federate across customer-tenant boundaries, a cluster-scoped name might be cleaner. **Recommend `example.com`** — federation comes later and federation specifically supports cross-trust-domain.
 3. **HCP Vault PKI vs SPIRE PKI — overlap or federation?** Phase 5j-4 has SPIRE chain up to Vault PKI `spire-ca` (Vault stays root). The alternative is SPIRE as its own root with no Vault dependency. **Recommend keep Vault as upstream root** — single source of truth for the org's PKI, matches how `jess-ca` + `falcon-id-ca` already chain.
 4. **What about ESO + Vault that ALSO needs workload identity?** ESO currently uses the Kubernetes auth method (SA token → Vault role binding). Migrating ESO to consume SPIFFE SVIDs against Vault's `cert` auth method is technically possible but cross-cuts the entire secret-fetch substrate. **Defer to a separate ADR**; Phase 5j-4 is jess-scoped.
 5. **Trust bundle distribution outside the cluster** — when a future federated peer needs the bundle, do we publish via Talon-fronted `.well-known/spiffe-bundle` or via a dedicated unauth endpoint? **Talon-fronted is more consistent** with how every other IdP-tier metadata is exposed; deferred until federation actually surfaces.
