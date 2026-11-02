@@ -142,7 +142,7 @@ ironrdp-async = { version = "=0.9.0", default-features = false }
 ironrdp-tokio = { version = "=0.9.0", default-features = false }
 ironrdp-session = { version = "=0.9.0", default-features = false }
 sspi = { version = "=0.21.0", default-features = false, features = ["network_client", "aws-lc-rs"] }
-tokio-rustls = { version = "=0.26.4" }
+tokio-rustls = { version = "=0.26.6" }
 x509-cert = { version = "=0.2.5", default-features = false, features = ["std"] }
 zeroize = { version = "1" }
 # PNG encoder for the P2a "first pixels" decode (ADR 0051,
