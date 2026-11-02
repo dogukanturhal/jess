@@ -16,7 +16,7 @@
     "@carbon/react": "1.110.0",
     "@carbon/styles": "1.109.0",
     "@ibm/plex": "6.4.1",
-    "@xterm/addon-fit": "0.10.0",
+    "@xterm/addon-fit": "0.11.0",
     "@xterm/xterm": "5.5.0",
     "asciinema-player": "3.10.0",
     "react": "18.3.1",
