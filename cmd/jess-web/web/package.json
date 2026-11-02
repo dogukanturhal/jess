@@ -14,7 +14,7 @@
   "dependencies": {
     "@carbon/icons-react": "11.82.0",
     "@carbon/react": "1.110.0",
-    "@carbon/styles": "1.109.0",
+    "@carbon/styles": "1.118.0",
     "@ibm/plex": "6.4.1",
     "@xterm/addon-fit": "0.10.0",
     "@xterm/xterm": "5.5.0",
