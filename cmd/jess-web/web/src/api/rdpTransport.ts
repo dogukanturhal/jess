@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // rdpTransport — pluggable carrier for the RDP live TLV stream (ADR 0055).
 //
 // The live console speaks the P2b TLV wire (see rdp.ts). Historically that rode

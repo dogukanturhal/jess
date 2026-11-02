@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Admin API client — backs the SPA /admin route. All endpoints proxy
 // to the controller admin port via jess-web's /api/admin/* handlers,
 // which enforce a server-side platform_admin gate (the SPA also gates

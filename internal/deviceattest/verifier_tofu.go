@@ -4,8 +4,6 @@ package deviceattest
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"time"
@@ -144,8 +142,7 @@ func (v *tofuVerifier) Verify(ctx context.Context, req VerifyRequest) (VerifyRes
 	// Compute the TOFU anchor: SHA-256 of the canonical PEM bytes.
 	// Using the raw input bytes (not re-encoded) so the hash is stable
 	// across verifier calls with the same key.
-	sum := sha256.Sum256(req.EKPubKeyPEM)
-	ekHash := hex.EncodeToString(sum[:])
+	ekHash := EKHashOf(req.EKPubKeyPEM)
 
 	// Look up prior enrollment.
 	prior, err := v.store.GetByEKPubkeyHash(ctx, ekHash)
@@ -185,6 +182,9 @@ func (v *tofuVerifier) verifyReturning(
 	reasons := []string{
 		"path_b_tofu_returning_device",
 		"witness_" + prior.WitnessAdminSub,
+	}
+	if prior.WitnessMethod == WitnessMethodOTP {
+		reasons = append(reasons, "witness_amr_otp")
 	}
 
 	return VerifyResponse{
@@ -242,7 +242,8 @@ func (v *tofuVerifier) verifyFirstEnrollment(
 	}
 
 	// Verify the operator's WebAuthn-signed JWS.
-	if err := v.witness.Verify(ctx, *req.Witness, req.DeviceUUID); err != nil {
+	wres, err := v.witness.Verify(ctx, *req.Witness, req.DeviceUUID, ekHash, req.UserSub)
+	if err != nil {
 		return VerifyResponse{}, fmt.Errorf("%w: witness JWS verification failed: %v", ErrVerification, err)
 	}
 
@@ -264,18 +265,25 @@ func (v *tofuVerifier) verifyFirstEnrollment(
 		Model:           req.Model,
 		Manufacturer:    req.SystemManufacturer,
 		WitnessAdminSub: req.Witness.AdminSub,
+		WitnessMethod:   wres.Method,
 		EnrolledAt:      now,
 	}
 	if err := v.store.Register(ctx, row); err != nil {
 		return VerifyResponse{}, fmt.Errorf("%w: enrollment store write failed: %v", ErrVerification, err)
 	}
 
+	// OTP-witnessed devices stay TIER_BYOD: there is no lower tier, and an
+	// unknown tier would match no Talon rule.
+	reasons := []string{
+		"path_b_tofu_enrollment",
+		"witness_" + req.Witness.AdminSub,
+	}
+	if wres.Method == WitnessMethodOTP {
+		reasons = append(reasons, "witness_amr_otp")
+	}
 	return VerifyResponse{
-		Path: "B_tofu",
-		Tier: "TIER_BYOD",
-		Reasons: []string{
-			"path_b_tofu_enrollment",
-			"witness_" + req.Witness.AdminSub,
-		},
+		Path:    "B_tofu",
+		Tier:    "TIER_BYOD",
+		Reasons: reasons,
 	}, nil
 }

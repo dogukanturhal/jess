@@ -60,7 +60,7 @@ func TestLookupPublicKey_HappyPath(t *testing.T) {
 		falconid.WithHTTPClient(srv.Client()),
 	)
 
-	got, err := store.LookupPublicKey(context.Background(), "any-sub-is-ignored")
+	got, err := store.LookupPublicKey(context.Background(), "any-sub-is-ignored", "")
 	if err != nil {
 		t.Fatalf("LookupPublicKey: unexpected error: %v", err)
 	}
@@ -93,8 +93,8 @@ func TestLookupPublicKey_SubIgnored(t *testing.T) {
 		falconid.WithHTTPClient(srv.Client()),
 	)
 
-	key1, err1 := store.LookupPublicKey(context.Background(), "operator-alice")
-	key2, err2 := store.LookupPublicKey(context.Background(), "operator-bob")
+	key1, err1 := store.LookupPublicKey(context.Background(), "operator-alice", "")
+	key2, err2 := store.LookupPublicKey(context.Background(), "operator-bob", "")
 	if err1 != nil || err2 != nil {
 		t.Fatalf("LookupPublicKey errors: %v / %v", err1, err2)
 	}
@@ -120,7 +120,7 @@ func TestLookupPublicKey_EmptyJWKS(t *testing.T) {
 		falconid.WithHTTPClient(srv.Client()),
 	)
 
-	_, err := store.LookupPublicKey(context.Background(), "any")
+	_, err := store.LookupPublicKey(context.Background(), "any", "")
 	if err == nil {
 		t.Fatal("expected error for empty JWKS, got nil")
 	}
@@ -152,7 +152,7 @@ func TestLookupPublicKey_CacheHit(t *testing.T) {
 	)
 
 	for i := 0; i < 5; i++ {
-		if _, err := store.LookupPublicKey(context.Background(), "sub"); err != nil {
+		if _, err := store.LookupPublicKey(context.Background(), "sub", ""); err != nil {
 			t.Fatalf("call %d: %v", i, err)
 		}
 	}
@@ -193,7 +193,7 @@ func TestLookupPublicKey_CacheExpiry(t *testing.T) {
 	)
 
 	// First call: populates the cache.
-	if _, err := store.LookupPublicKey(context.Background(), "sub"); err != nil {
+	if _, err := store.LookupPublicKey(context.Background(), "sub", ""); err != nil {
 		t.Fatalf("first call: %v", err)
 	}
 	if callCount != 1 {
@@ -204,7 +204,7 @@ func TestLookupPublicKey_CacheExpiry(t *testing.T) {
 	afterExpiry = true
 
 	// Second call: cache is expired → new fetch.
-	if _, err := store.LookupPublicKey(context.Background(), "sub"); err != nil {
+	if _, err := store.LookupPublicKey(context.Background(), "sub", ""); err != nil {
 		t.Fatalf("second call (after expiry): %v", err)
 	}
 	if callCount != 2 {
@@ -225,7 +225,7 @@ func TestLookupPublicKey_HTTPError(t *testing.T) {
 		falconid.WithHTTPClient(srv.Client()),
 	)
 
-	_, err := store.LookupPublicKey(context.Background(), "sub")
+	_, err := store.LookupPublicKey(context.Background(), "sub", "")
 	if err == nil {
 		t.Fatal("expected error on HTTP 503, got nil")
 	}
@@ -264,7 +264,7 @@ func TestLookupPublicKey_StaleCache(t *testing.T) {
 	)
 
 	// First call: populate cache.
-	if _, err := store.LookupPublicKey(context.Background(), "sub"); err != nil {
+	if _, err := store.LookupPublicKey(context.Background(), "sub", ""); err != nil {
 		t.Fatalf("first call: %v", err)
 	}
 
@@ -274,11 +274,42 @@ func TestLookupPublicKey_StaleCache(t *testing.T) {
 	afterExpiry = true
 
 	// Second call after TTL expiry: fetch fails but stale cache is returned.
-	key, err := store.LookupPublicKey(context.Background(), "sub")
+	key, err := store.LookupPublicKey(context.Background(), "sub", "")
 	if err != nil {
 		t.Fatalf("expected stale cache fallback, got error: %v", err)
 	}
 	if key == nil {
 		t.Fatal("stale cache returned nil key")
+	}
+}
+
+// TestLookupPublicKey_SelectsByKID verifies the key is chosen by JWS kid, and
+// that only an empty kid falls back to keys[0].
+func TestLookupPublicKey_SelectsByKID(t *testing.T) {
+	k0, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	k1, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(buildJWKS(t, &k0.PublicKey, &k1.PublicKey)) // kids key-0, key-1
+	}))
+	defer srv.Close()
+	store := falconid.NewFalconIDOperatorPublicKeyStore(srv.URL, falconid.WithHTTPClient(srv.Client()))
+
+	got1, err := store.LookupPublicKey(context.Background(), "s", "key-1")
+	if err != nil {
+		t.Fatalf("kid key-1: %v", err)
+	}
+	if !got1.(*ecdsa.PublicKey).Equal(&k1.PublicKey) {
+		t.Fatal("kid key-1 returned the wrong key")
+	}
+	got0, err := store.LookupPublicKey(context.Background(), "s", "key-0")
+	if err != nil || !got0.(*ecdsa.PublicKey).Equal(&k0.PublicKey) {
+		t.Fatalf("kid key-0: key mismatch / err %v", err)
+	}
+	gotDefault, err := store.LookupPublicKey(context.Background(), "s", "")
+	if err != nil || !gotDefault.(*ecdsa.PublicKey).Equal(&k0.PublicKey) {
+		t.Fatalf("empty kid should fall back to keys[0]: err %v", err)
+	}
+	if _, err := store.LookupPublicKey(context.Background(), "s", "nope"); !errors.Is(err, devicepolicy.ErrOperatorNotFound) {
+		t.Fatalf("unknown kid: want ErrOperatorNotFound, got %v", err)
 	}
 }

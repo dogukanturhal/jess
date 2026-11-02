@@ -12,8 +12,8 @@
 // the operator's sub and the device_uuid being witnessed.  Jess verifies the
 // JWS by fetching the current signing key from Falcon-ID's JWKS endpoint.
 //
-// This means LookupPublicKey IGNORES the sub parameter and always returns the
-// current JWKS signing key.  The sub-claim binding is enforced inside
+// This means LookupPublicKey IGNORES the sub parameter and returns the JWKS
+// signing key selected by the JWS kid header (first key only when no kid).  The sub-claim binding is enforced inside
 // devicepolicy.WebAuthnWitnessVerifier, which verifies:
 //
 //  1. The JWS signature against the key returned here (proves the IdP signed it).
@@ -55,7 +55,16 @@ const (
 	// go-oidc uses a similar 3-minute window; 5-minute jitter is added
 	// by the remote key set implementation there but 3 min is safe here.
 	defaultCacheTTL = 3 * time.Minute
+
+	// kidRefetchMinInterval bounds JWKS re-fetches triggered by an unknown kid.
+	kidRefetchMinInterval = 15 * time.Second
 )
+
+// jwksKey is one parsed JWKS entry.
+type jwksKey struct {
+	kid string
+	key crypto.PublicKey
+}
 
 // FalconIDOperatorPublicKeyStore implements devicepolicy.OperatorPublicKeyStore
 // by fetching the current signing key from Falcon-ID's JWKS endpoint.
@@ -71,7 +80,8 @@ type FalconIDOperatorPublicKeyStore struct {
 	nowFn    func() time.Time
 
 	mu          sync.Mutex
-	cachedKeys  []crypto.PublicKey
+	cachedKeys  []jwksKey
+	fetchedAt   time.Time
 	cacheExpiry time.Time
 }
 
@@ -96,7 +106,7 @@ func WithClockForTest(fn func() time.Time) FalconIDOperatorPublicKeyStoreOption 
 // LookupPublicKey triggers the initial fetch.
 //
 // jwksURL must be the full HTTPS URL of the JWKS endpoint, e.g.
-// "https://id.hexxlock.com/.well-known/jwks.json".
+// "https://id.example.com/.well-known/jwks.json".
 //
 // Panics if jwksURL is empty so the misconfiguration is caught at controller
 // startup, not at the first enrollment request.
@@ -116,9 +126,15 @@ func NewFalconIDOperatorPublicKeyStore(jwksURL string, opts ...FalconIDOperatorP
 	return s
 }
 
-// LookupPublicKey returns the first public key from Falcon-ID's JWKS endpoint.
+// LookupPublicKey returns a public key from Falcon-ID's JWKS endpoint.
 //
 // The sub parameter is intentionally unused — see package-level godoc.
+//
+// kid selects the key with that JWKS key id; a kid that is not in the set
+// returns devicepolicy.ErrOperatorNotFound (after one rate-limited re-fetch,
+// so a Falcon-ID signing-key rotation is picked up before the cache TTL).
+// Only an empty kid (legacy JWS without a kid header) falls back to the
+// first key.
 //
 // Returns devicepolicy.ErrOperatorNotFound when the JWKS contains zero keys,
 // which signals a Falcon-ID configuration problem that the operator must fix
@@ -129,13 +145,21 @@ func NewFalconIDOperatorPublicKeyStore(jwksURL string, opts ...FalconIDOperatorP
 // is issued.
 //
 // Implements devicepolicy.OperatorPublicKeyStore.
-func (s *FalconIDOperatorPublicKeyStore) LookupPublicKey(ctx context.Context, _ string) (crypto.PublicKey, error) {
+func (s *FalconIDOperatorPublicKeyStore) LookupPublicKey(ctx context.Context, _, kid string) (crypto.PublicKey, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	now := s.nowFn()
 	if len(s.cachedKeys) > 0 && now.Before(s.cacheExpiry) {
-		return s.cachedKeys[0], nil
+		if k, ok := pickKey(s.cachedKeys, kid); ok {
+			return k, nil
+		}
+		// Unknown kid on a warm cache: re-fetch at most once per
+		// kidRefetchMinInterval so a rotated key is found without letting a
+		// forged kid hammer the JWKS endpoint.
+		if now.Sub(s.fetchedAt) < kidRefetchMinInterval {
+			return nil, kidNotFound(kid)
+		}
 	}
 
 	keys, err := s.fetchJWKS(ctx)
@@ -146,7 +170,10 @@ func (s *FalconIDOperatorPublicKeyStore) LookupPublicKey(ctx context.Context, _ 
 		// "soft-fail until first successful fetch" posture used throughout
 		// the controller (CRL cache, CAEP subscriber, etc.).
 		if len(s.cachedKeys) > 0 {
-			return s.cachedKeys[0], nil
+			if k, ok := pickKey(s.cachedKeys, kid); ok {
+				return k, nil
+			}
+			return nil, kidNotFound(kid)
 		}
 		return nil, fmt.Errorf("falconid operator_public_key_store: fetch JWKS: %w", err)
 	}
@@ -156,13 +183,34 @@ func (s *FalconIDOperatorPublicKeyStore) LookupPublicKey(ctx context.Context, _ 
 	}
 
 	s.cachedKeys = keys
+	s.fetchedAt = now
 	s.cacheExpiry = now.Add(s.cacheTTL)
-	return keys[0], nil
+	if k, ok := pickKey(keys, kid); ok {
+		return k, nil
+	}
+	return nil, kidNotFound(kid)
+}
+
+// pickKey selects the key for kid; an empty kid selects the first key.
+func pickKey(keys []jwksKey, kid string) (crypto.PublicKey, bool) {
+	if kid == "" {
+		return keys[0].key, true
+	}
+	for _, k := range keys {
+		if k.kid == kid {
+			return k.key, true
+		}
+	}
+	return nil, false
+}
+
+func kidNotFound(kid string) error {
+	return fmt.Errorf("falconid operator_public_key_store: %w (no JWKS key with kid %q)", devicepolicy.ErrOperatorNotFound, kid)
 }
 
 // fetchJWKS performs a plain HTTP GET of s.jwksURL and returns the parsed
 // public keys.  Called with s.mu held.
-func (s *FalconIDOperatorPublicKeyStore) fetchJWKS(ctx context.Context) ([]crypto.PublicKey, error) {
+func (s *FalconIDOperatorPublicKeyStore) fetchJWKS(ctx context.Context) ([]jwksKey, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.jwksURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
@@ -188,7 +236,7 @@ func (s *FalconIDOperatorPublicKeyStore) fetchJWKS(ctx context.Context) ([]crypt
 		return nil, fmt.Errorf("unmarshal JWKS JSON: %w", err)
 	}
 
-	out := make([]crypto.PublicKey, 0, len(jwks.Keys))
+	out := make([]jwksKey, 0, len(jwks.Keys))
 	for i, jwk := range jwks.Keys {
 		if !jwk.Valid() {
 			continue
@@ -201,7 +249,7 @@ func (s *FalconIDOperatorPublicKeyStore) fetchJWKS(ctx context.Context) ([]crypt
 		if !ok {
 			return nil, fmt.Errorf("JWKS key[%d] type %T is not a crypto.PublicKey", i, pub.Key)
 		}
-		out = append(out, cpk)
+		out = append(out, jwksKey{kid: jwk.KeyID, key: cpk})
 	}
 	return out, nil
 }

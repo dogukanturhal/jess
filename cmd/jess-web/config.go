@@ -35,7 +35,7 @@ type WebConfig struct {
 	// browser, including the bucket path. The SPA appends the URL-
 	// encoded object key to form a deep link to the recording bundle.
 	//
-	// Example: "https://internal.example.com/browser/audit-archive"
+	// Example: "https://console.internal.example.com/browser/audit-archive"
 	// Empty string disables the deep-link feature — the SPA shows the
 	// recording_path chip as copy-only (Phase 5e-8 behaviour).
 	RecordingConsoleURL string `json:"recording_console_url,omitempty"`

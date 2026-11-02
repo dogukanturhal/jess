@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Minimal type shim for asciinema-player 3.x — the npm package ships
 // no .d.ts. We only call create(), which returns an opaque player
 // handle; types stay narrow on purpose so future SDK churn surfaces

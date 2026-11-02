@@ -39,7 +39,7 @@ func TestValidateAddressNotSSRF(t *testing.T) {
 		{"rfc1918-192", "192.168.1.100:3389", false},
 		{"rfc1918-172", "172.16.5.10:5432", false},
 		{"k8s-svc", "jess-pg-rw.cnpg-clusters.svc.cluster.local:5432", false},
-		{"plain-host", "dc01.internal.example.com:3389", false},
+		{"plain-host", "ad-dc.internal.example.com:3389", false},
 		{"ipv6-private", "[fc00::1]:22", false},
 	}
 	for _, c := range cases {

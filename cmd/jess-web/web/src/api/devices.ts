@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Corporate device pre-registration API client — backs the SPA /devices
 // route. All endpoints proxy to the controller admin port via jess-web's
 // /api/admin/devices/* handlers, which enforce a server-side

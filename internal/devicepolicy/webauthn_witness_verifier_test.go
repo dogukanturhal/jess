@@ -8,6 +8,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"errors"
 	"testing"
 	"time"
 
@@ -20,6 +21,8 @@ const (
 	testIssuer     = "jess-controller"
 	testAdminSub   = "ops_alice"
 	testDeviceUUID = "aaaabbbb-0000-4000-8000-ccccddddeeee"
+	testEKHash     = "ab12"
+	testBearerSub  = "user_bob"
 )
 
 // staticOperatorKeyStore is a test-only OperatorPublicKeyStore backed by
@@ -28,7 +31,7 @@ type staticOperatorKeyStore struct {
 	keys map[string]crypto.PublicKey
 }
 
-func (s *staticOperatorKeyStore) LookupPublicKey(_ context.Context, sub string) (crypto.PublicKey, error) {
+func (s *staticOperatorKeyStore) LookupPublicKey(_ context.Context, sub, _ string) (crypto.PublicKey, error) {
 	k, ok := s.keys[sub]
 	if !ok {
 		return nil, ErrOperatorNotFound
@@ -98,7 +101,7 @@ func TestWebAuthnWitnessVerifier_HappyPath(t *testing.T) {
 	v := NewWebAuthnWitnessVerifier(testIssuer, store,
 		WithWitnessVerifierClock(func() time.Time { return now }))
 
-	if err := v.Verify(context.Background(), bundle, testDeviceUUID); err != nil {
+	if _, err := v.Verify(context.Background(), bundle, testDeviceUUID, testEKHash, testBearerSub); err != nil {
 		t.Fatalf("happy path: unexpected error: %v", err)
 	}
 }
@@ -117,7 +120,7 @@ func TestWebAuthnWitnessVerifier_ExpiredWitness(t *testing.T) {
 
 	// Verify at "now" (real clock).
 	v := NewWebAuthnWitnessVerifier(testIssuer, store)
-	err := v.Verify(context.Background(), bundle, testDeviceUUID)
+	_, err := v.Verify(context.Background(), bundle, testDeviceUUID, testEKHash, testBearerSub)
 	if err == nil {
 		t.Fatal("expected error for expired witness, got nil")
 	}
@@ -141,7 +144,7 @@ func TestWebAuthnWitnessVerifier_WrongAudience(t *testing.T) {
 
 	v := NewWebAuthnWitnessVerifier(testIssuer, store,
 		WithWitnessVerifierClock(func() time.Time { return now }))
-	err := v.Verify(context.Background(), bundle, testDeviceUUID)
+	_, err := v.Verify(context.Background(), bundle, testDeviceUUID, testEKHash, testBearerSub)
 	if err == nil {
 		t.Fatal("expected error for wrong audience, got nil")
 	}
@@ -166,7 +169,7 @@ func TestWebAuthnWitnessVerifier_WrongDeviceUUID(t *testing.T) {
 		WithWitnessVerifierClock(func() time.Time { return now }))
 	// But we present it for a DIFFERENT device.
 	wrongDevice := "zzzz0000-0000-4000-8000-ffffaaaabbbb"
-	err := v.Verify(context.Background(), bundle, wrongDevice)
+	_, err := v.Verify(context.Background(), bundle, wrongDevice, testEKHash, testBearerSub)
 	if err == nil {
 		t.Fatal("expected error for wrong device_uuid, got nil")
 	}
@@ -193,7 +196,7 @@ func TestWebAuthnWitnessVerifier_TamperedSignature(t *testing.T) {
 
 	v := NewWebAuthnWitnessVerifier(testIssuer, store,
 		WithWitnessVerifierClock(func() time.Time { return now }))
-	err := v.Verify(context.Background(), bundle, testDeviceUUID)
+	_, err := v.Verify(context.Background(), bundle, testDeviceUUID, testEKHash, testBearerSub)
 	if err == nil {
 		t.Fatal("expected error for tampered signature, got nil")
 	}
@@ -216,7 +219,7 @@ func TestWebAuthnWitnessVerifier_UnknownAdminSub(t *testing.T) {
 
 	v := NewWebAuthnWitnessVerifier(testIssuer, store,
 		WithWitnessVerifierClock(func() time.Time { return now }))
-	err := v.Verify(context.Background(), bundle, testDeviceUUID)
+	_, err := v.Verify(context.Background(), bundle, testDeviceUUID, testEKHash, testBearerSub)
 	if err == nil {
 		t.Fatal("expected error for unknown admin sub, got nil")
 	}
@@ -243,7 +246,7 @@ func TestWebAuthnWitnessVerifier_ZeroIssuedAt(t *testing.T) {
 
 	v := NewWebAuthnWitnessVerifier(testIssuer, store,
 		WithWitnessVerifierClock(func() time.Time { return now }))
-	err := v.Verify(context.Background(), bundle, testDeviceUUID)
+	_, err := v.Verify(context.Background(), bundle, testDeviceUUID, testEKHash, testBearerSub)
 	if err == nil {
 		t.Fatal("expected error for zero IssuedAt, got nil")
 	}
@@ -257,4 +260,125 @@ func TestWebAuthnWitnessVerifier_ZeroIssuedAt(t *testing.T) {
 // since the error is always wrapped with %w.
 func isDeviceAttestVerificationErr(err error) bool {
 	return err != nil && isErrVerification(err)
+}
+
+// -- TOTP witness fallback ------------------------------------------------
+
+func otpClaims(now time.Time, sub string) witnessClaims {
+	c := buildValidClaims(now)
+	c.Subject = sub
+	c.Audience = jwt.ClaimStrings{witnessAudienceOTP}
+	c.Amr = []string{"otp"}
+	c.WitnessMethod = "otp"
+	c.EKPubKeyHash = testEKHash
+	return c
+}
+
+func verifyWith(t *testing.T, allowOTP bool, claims witnessClaims, ek, bearer string) (deviceattest.WitnessResult, error) {
+	t.Helper()
+	priv, pub := generateOperatorKey(t)
+	store := &staticOperatorKeyStore{keys: map[string]crypto.PublicKey{claims.Subject: pub}}
+	now := time.Now().UTC()
+	v := NewWebAuthnWitnessVerifier(testIssuer, store,
+		WithWitnessVerifierClock(func() time.Time { return now }),
+		WithWitnessAllowOTP(allowOTP))
+	b := buildBundle(signWitness(t, priv, claims), now)
+	b.AdminSub = claims.Subject
+	return v.Verify(context.Background(), b, testDeviceUUID, ek, bearer)
+}
+
+func TestWitness_OTPHappyPath(t *testing.T) {
+	now := time.Now().UTC()
+	res, err := verifyWith(t, true, otpClaims(now, testBearerSub), testEKHash, testBearerSub)
+	if err != nil {
+		t.Fatalf("otp happy path: %v", err)
+	}
+	if res.Method != deviceattest.WitnessMethodOTP || res.Sub != testBearerSub || res.EKHash != testEKHash {
+		t.Fatalf("unexpected result %+v", res)
+	}
+}
+
+func TestWitness_OTPRejectedWhenSwitchOff(t *testing.T) {
+	now := time.Now().UTC()
+	_, err := verifyWith(t, false, otpClaims(now, testBearerSub), testEKHash, testBearerSub)
+	if !errors.Is(err, deviceattest.ErrVerification) {
+		t.Fatalf("want ErrVerification, got %v", err)
+	}
+}
+
+func TestWitness_OTPSubMustEqualBearer(t *testing.T) {
+	now := time.Now().UTC()
+	_, err := verifyWith(t, true, otpClaims(now, testBearerSub), testEKHash, "someone_else")
+	if !errors.Is(err, deviceattest.ErrVerification) {
+		t.Fatalf("want ErrVerification, got %v", err)
+	}
+}
+
+func TestWitness_AudAmrMismatch(t *testing.T) {
+	now := time.Now().UTC()
+	// OTP audience carrying the passkey amr.
+	c := otpClaims(now, testBearerSub)
+	c.Amr = []string{"hwk"}
+	if _, err := verifyWith(t, true, c, testEKHash, testBearerSub); !errors.Is(err, deviceattest.ErrVerification) {
+		t.Fatalf("otp aud + hwk amr: want ErrVerification, got %v", err)
+	}
+	// Passkey audience carrying the otp amr.
+	p := buildValidClaims(now)
+	p.Amr = []string{"otp"}
+	if _, err := verifyWith(t, true, p, testEKHash, testBearerSub); !errors.Is(err, deviceattest.ErrVerification) {
+		t.Fatalf("passkey aud + otp amr: want ErrVerification, got %v", err)
+	}
+	// witness_method contradicting the audience.
+	m := buildValidClaims(now)
+	m.WitnessMethod = "otp"
+	if _, err := verifyWith(t, true, m, testEKHash, testBearerSub); !errors.Is(err, deviceattest.ErrVerification) {
+		t.Fatalf("witness_method mismatch: want ErrVerification, got %v", err)
+	}
+	// OTP without amr.
+	n := otpClaims(now, testBearerSub)
+	n.Amr = nil
+	if _, err := verifyWith(t, true, n, testEKHash, testBearerSub); !errors.Is(err, deviceattest.ErrVerification) {
+		t.Fatalf("otp without amr: want ErrVerification, got %v", err)
+	}
+}
+
+func TestWitness_WrongEKHash(t *testing.T) {
+	now := time.Now().UTC()
+	for name, c := range map[string]witnessClaims{"passkey": buildValidClaims(now), "otp": otpClaims(now, testBearerSub)} {
+		c.EKPubKeyHash = "deadbeef"
+		if _, err := verifyWith(t, true, c, testEKHash, testBearerSub); !errors.Is(err, deviceattest.ErrVerification) {
+			t.Fatalf("%s: want ErrVerification for wrong ek hash, got %v", name, err)
+		}
+	}
+	// OTP must carry the claim.
+	c := otpClaims(now, testBearerSub)
+	c.EKPubKeyHash = ""
+	if _, err := verifyWith(t, true, c, testEKHash, testBearerSub); !errors.Is(err, deviceattest.ErrVerification) {
+		t.Fatalf("otp without ek hash: want ErrVerification, got %v", err)
+	}
+}
+
+func TestWitness_PasskeyWithMatchingEKHashAndAmr(t *testing.T) {
+	now := time.Now().UTC()
+	c := buildValidClaims(now)
+	c.Amr = []string{"hwk"}
+	c.WitnessMethod = "passkey"
+	c.EKPubKeyHash = testEKHash
+	res, err := verifyWith(t, false, c, testEKHash, "different_operator")
+	if err != nil || res.Method != deviceattest.WitnessMethodPasskey || res.EKHash != testEKHash {
+		t.Fatalf("passkey with new claims: res=%+v err=%v", res, err)
+	}
+}
+
+// Legacy JWS (no amr / witness_method / ek_pubkey_hash) still passes as a
+// passkey witness even with the OTP switch off.
+func TestWitness_LegacyJWSPasses(t *testing.T) {
+	now := time.Now().UTC()
+	res, err := verifyWith(t, false, buildValidClaims(now), testEKHash, testBearerSub)
+	if err != nil {
+		t.Fatalf("legacy JWS: %v", err)
+	}
+	if res.Method != deviceattest.WitnessMethodPasskey || res.EKHash != "" {
+		t.Fatalf("unexpected result %+v", res)
+	}
 }

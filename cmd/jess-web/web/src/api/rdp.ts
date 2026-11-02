@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // RDP WebSocket frame protocol — Phase 5f-7.
 //
 // Wire format between the SPA's RDPCanvas component and the

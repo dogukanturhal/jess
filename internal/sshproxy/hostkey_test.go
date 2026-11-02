@@ -47,7 +47,7 @@ func newSigner(t *testing.T) ssh.Signer {
 func TestCAHostKey_AcceptsValidCert(t *testing.T) {
 	ca := newSigner(t)
 	host := newSigner(t)
-	cert := hostCert(t, ca, host, "node-cp-01.internal.hexxlock.com", "node-cp-01", "10.0.70.100")
+	cert := hostCert(t, ca, host, "node-cp-01.internal.example.com", "node-cp-01", "10.0.70.100")
 
 	algos, cb, err := CAHostKey(ca.PublicKey())
 	if err != nil {
@@ -66,7 +66,7 @@ func TestCAHostKey_AcceptsValidCert(t *testing.T) {
 
 	// Each principal should validate.
 	for _, host := range []string{
-		"node-cp-01.internal.hexxlock.com:22",
+		"node-cp-01.internal.example.com:22",
 		"node-cp-01:22",
 		"10.0.70.100:22",
 	} {
@@ -85,8 +85,8 @@ func TestCAHostKey_RejectsPrincipalMismatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CAHostKey: %v", err)
 	}
-	if err := cb("dc01:22", nil, cert); err == nil {
-		t.Fatal("expected rejection — host cert's ValidPrincipals does NOT include dc01 but cb accepted")
+	if err := cb("ad-dc:22", nil, cert); err == nil {
+		t.Fatal("expected rejection — host cert's ValidPrincipals does NOT include ad-dc but cb accepted")
 	}
 }
 

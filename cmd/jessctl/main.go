@@ -4,7 +4,7 @@
 // opens a local port that tunnels through the Jess broker to a target, so the
 // operator points a normal client (ssh, psql, …) at the local port:
 //
-//	jessctl connect echo --controller internal.example.com:7101 --grant <id> --listen :2222
+//	jessctl connect echo --controller controller.internal.example.com:7101 --grant <id> --listen :2222
 //	ssh -p 2222 hexxlock@127.0.0.1
 //
 // Auth: --token / $JESS_TOKEN if you already have a Falcon-ID token, otherwise
@@ -64,6 +64,7 @@ func main() {
 func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
   jessctl connect <target-id> --controller <addr> --grant <id> [--listen 127.0.0.1:0] [--token T]
+  jessctl connect --stdio <target-id> --controller <addr> --grant <id>   (OpenSSH ProxyCommand)
   jessctl connect --controller <addr> --grant <id> [--listen 127.0.0.1:0] [--token T] <target-id>
   jessctl login --issuer <url> --client-id <id>
   jessctl up --admin <https-addr> [--renew-before 30m] [--out-dir ~/.config/jess] [--force]
@@ -158,8 +159,9 @@ func cmdConnect(args []string) {
 	controller := fs.String("controller", env("JESS_CONTROLLER", ""), "controller operator address host:port")
 	grant := fs.String("grant", env("JESS_GRANT", ""), "JIT grant id")
 	listen := fs.String("listen", "127.0.0.1:0", "local listen address")
+	stdio := fs.Bool("stdio", false, "pipe the session to stdin/stdout (OpenSSH ProxyCommand) instead of --listen")
 	token := fs.String("token", env("JESS_TOKEN", ""), "Falcon-ID token (else OIDC login)")
-	issuer := fs.String("issuer", env("JESS_OIDC_ISSUER", "https://id.hexxlock.com"), "OIDC issuer")
+	issuer := fs.String("issuer", env("JESS_OIDC_ISSUER", "https://id.example.com"), "OIDC issuer")
 	clientID := fs.String("client-id", env("JESS_OIDC_CLIENT_ID", "svc-jess"), "OIDC client id")
 	redirect := fs.String("redirect", env("JESS_OIDC_REDIRECT", "127.0.0.1:8400"), "OIDC loopback redirect host:port (must match a registered redirect_uri)")
 	useTLS := fs.Bool("tls", env("JESS_OPERATOR_TLS", "") != "", "dial the controller operator port over TLS")
@@ -201,6 +203,16 @@ func cmdConnect(args []string) {
 		}
 	}
 
+	if *stdio {
+		// stdout carries tunnel bytes only; everything else goes to stderr.
+		if err := client.Stdio(ctx, *controller, tlsCfg,
+			wire.OperatorRequest{Token: tok, TargetID: target, GrantID: *grant}, os.Stdin, os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "jessctl: stdio tunnel: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	addr, err := client.LocalProxy(ctx, *listen, *controller, tlsCfg,
 		wire.OperatorRequest{Token: tok, TargetID: target, GrantID: *grant})
 	if err != nil {
@@ -214,7 +226,7 @@ func cmdConnect(args []string) {
 
 func cmdLogin(args []string) {
 	fs := flag.NewFlagSet("login", flag.ExitOnError)
-	issuer := fs.String("issuer", env("JESS_OIDC_ISSUER", "https://id.hexxlock.com"), "OIDC issuer")
+	issuer := fs.String("issuer", env("JESS_OIDC_ISSUER", "https://id.example.com"), "OIDC issuer")
 	clientID := fs.String("client-id", env("JESS_OIDC_CLIENT_ID", "svc-jess"), "OIDC client id")
 	redirect := fs.String("redirect", env("JESS_OIDC_REDIRECT", "127.0.0.1:8400"), "OIDC loopback redirect host:port (must match a registered redirect_uri)")
 	_ = fs.Parse(args)
@@ -277,7 +289,7 @@ func adminClientFromFlags(args []string, extra func(fs *flag.FlagSet)) (*client.
 	fs := flag.NewFlagSet("admin", flag.ExitOnError)
 	addr := fs.String("admin", env("JESS_ADMIN", ""), "controller admin address https://host:7103")
 	token := fs.String("token", env("JESS_TOKEN", ""), "Falcon-ID token (else OIDC login)")
-	issuer := fs.String("issuer", env("JESS_OIDC_ISSUER", "https://id.hexxlock.com"), "OIDC issuer")
+	issuer := fs.String("issuer", env("JESS_OIDC_ISSUER", "https://id.example.com"), "OIDC issuer")
 	clientID := fs.String("client-id", env("JESS_OIDC_CLIENT_ID", "svc-jess"), "OIDC client id")
 	redirect := fs.String("redirect", env("JESS_OIDC_REDIRECT", "127.0.0.1:8400"), "OIDC loopback redirect host:port")
 	tlsCA := fs.String("tls-ca", env("JESS_OPERATOR_TLS_CA", ""), "CA PEM verifying the controller; empty = system roots")

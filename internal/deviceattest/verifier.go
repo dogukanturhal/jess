@@ -66,7 +66,7 @@ type VerifyRequest struct {
 	UserSub string
 
 	// DeviceUUID is the client-asserted UUIDv4 for the device
-	// (spiffe://hexxlock.com/device/<uuid> SAN). The verifier validates
+	// (spiffe://example.com/device/<uuid> SAN). The verifier validates
 	// that this matches any prior enrollment for the same EK pubkey.
 	DeviceUUID string
 

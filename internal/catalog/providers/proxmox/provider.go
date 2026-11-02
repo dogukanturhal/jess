@@ -94,7 +94,7 @@ const DefaultMatchTag = "jess-managed"
 //
 // Mixing free-text and JSON is messy but it's the only Proxmox-native
 // way without requiring qemu-guest-agent. Real customers (and future
-// HexxLock prod use) will switch to Config 2 (guest-agent IP lookup)
+// production use) will switch to Config 2 (guest-agent IP lookup)
 // once that lands; the description-JSON path is the v1 fallback.
 const DescriptionEnvelopeKey = "jess"
 

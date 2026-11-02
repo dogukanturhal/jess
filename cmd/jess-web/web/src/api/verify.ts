@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Recording tamper-evidence verify — Phase 5e-14.
 //
 // Controller endpoint: GET /sessions/{id}/recording/verify

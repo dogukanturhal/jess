@@ -120,7 +120,7 @@ func TestEmitSessionMetaSendsTextFrameWithRowData(t *testing.T) {
 		frames = append(frames, capturedFrame{typ: typ, body: buf})
 		return nil
 	}
-	op := &Operator{Subject: "u-1", Email: "u1@hexxlock.com", Token: "tok"}
+	op := &Operator{Subject: "u-1", Email: "u1@example.com", Token: "tok"}
 	emitSessionMeta(context.Background(), writeFrame, g, op, "node-app-01", "g-1")
 
 	mu.Lock()
@@ -144,7 +144,7 @@ func TestEmitSessionMetaSendsTextFrameWithRowData(t *testing.T) {
 	if got.RecordingPath != "sess-abc123/recording.cast" {
 		t.Errorf("recording_path=%q", got.RecordingPath)
 	}
-	if got.OperatorEmail != "u1@hexxlock.com" {
+	if got.OperatorEmail != "u1@example.com" {
 		t.Errorf("operator_email=%q", got.OperatorEmail)
 	}
 }
@@ -168,7 +168,7 @@ func TestEmitSessionMetaSendsDegradedFrameOnFetchMiss(t *testing.T) {
 		frames = append(frames, capturedFrame{typ: typ, body: append([]byte(nil), b...)})
 		return nil
 	}
-	op := &Operator{Subject: "u-1", Email: "u1@hexxlock.com", Token: "tok"}
+	op := &Operator{Subject: "u-1", Email: "u1@example.com", Token: "tok"}
 	// Use a short ctx so the test doesn't wait the full 550ms.
 	ctx, cancel := context.WithTimeout(context.Background(), 1200*time.Millisecond)
 	defer cancel()

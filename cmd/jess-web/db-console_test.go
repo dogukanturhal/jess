@@ -46,7 +46,7 @@ func signedInRequest(t *testing.T, ss *sessionStore, body any) *http.Request {
 	ss.put(id, &Operator{
 		Token:   "tok-abc",
 		Subject: "u-1",
-		Email:   "u1@hexxlock.com",
+		Email:   "u1@example.com",
 		Expires: time.Now().Add(time.Hour),
 	})
 	b, _ := json.Marshal(body)

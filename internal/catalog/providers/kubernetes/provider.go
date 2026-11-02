@@ -10,7 +10,7 @@
 //
 // Opt-in by label: only Nodes carrying
 //
-//	jess.hexxlock.com/managed=true
+//	jess.example.com/managed=true
 //
 // surface as targets. Without this gate every K8s deployment would
 // auto-expose every node — a 1k-node cluster would dump 1k targets
@@ -27,8 +27,8 @@
 //	region:        node label topology.kubernetes.io/region   (if present)
 //	required_roles:["platform_admin"]      (configurable via NodesConfig)
 //	recorded:      true                    (every K8s-discovered SSH session recorded)
-//	host_key:      <annotation jess.hexxlock.com/ssh-host-key>
-//	criticality:   <annotation jess.hexxlock.com/criticality OR config default>
+//	host_key:      <annotation jess.example.com/ssh-host-key>
+//	criticality:   <annotation jess.example.com/criticality OR config default>
 //	tags:          ["k8s-node", "node-role:<role>", "team:<config>"]
 //
 // Empty host_key annotations → Node is SKIPPED with a warn log + a
@@ -59,7 +59,7 @@ import (
 // LabelManaged is the Node label that opts an instance into jess
 // brokering. The Aggregator side adds these as targets; everything
 // else is invisible.
-const LabelManaged = "jess.hexxlock.com/managed"
+const LabelManaged = "jess.example.com/managed"
 
 // AnnotationHostKey carries the SSH host public key for the Node
 // (authorized_keys-style line). Required: a Node without this
@@ -69,12 +69,12 @@ const LabelManaged = "jess.hexxlock.com/managed"
 // bootstrap script that ALSO runs configure-node-sshca.sh. The same
 // run that teaches the node's sshd to trust the Vault SSH-CA captures
 // /etc/ssh/ssh_host_ed25519_key.pub and stamps it here.
-const AnnotationHostKey = "jess.hexxlock.com/ssh-host-key"
+const AnnotationHostKey = "jess.example.com/ssh-host-key"
 
 // AnnotationCriticality lets the Node operator pin a criticality
 // independent of the provider default. Valid values: low, medium,
 // high, critical (matches Target.Criticality).
-const AnnotationCriticality = "jess.hexxlock.com/criticality"
+const AnnotationCriticality = "jess.example.com/criticality"
 
 // LabelTopologyRegion is the standard K8s topology label used to fill
 // Target.Region. Same value cluster-autoscaler + cluster-api use.

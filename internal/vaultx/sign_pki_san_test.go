@@ -38,7 +38,7 @@ func TestSignPKICert_URISansAndAltNames(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	const spiffe = "spiffe://hexxlock.com/device/3f9b2c1a-0000-4abc-9def-1234567890ab"
+	const spiffe = "spiffe://example.com/device/3f9b2c1a-0000-4abc-9def-1234567890ab"
 	_, err = c.SignPKICert(context.Background(), "jess-device-ca", "device-cert", PKISignRequest{
 		CSRPEM:     "-----BEGIN CERTIFICATE REQUEST-----\nx\n-----END CERTIFICATE REQUEST-----",
 		CommonName: "04ad2960",

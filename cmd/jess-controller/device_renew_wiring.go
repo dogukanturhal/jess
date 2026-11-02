@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/dogukanturhal/jess/internal/devicecert"
 	"github.com/dogukanturhal/jess/internal/devicepolicy"
@@ -61,7 +62,9 @@ func buildDeviceRenewHandler(next http.Handler) (http.Handler, bool) {
 	// Falcon-ID by-uuid endpoint is deployed. Reuses the same Falcon-ID
 	// internal URL + s2s token source as the attest wiring.
 	var lookup deviceLookup
-	if os.Getenv("JESS_DEVICE_RENEW_REVOCATION_CHECK") == "true" {
+	// The OTP-witness age cap also needs the lookup, so JESS_WITNESS_ALLOW_OTP
+	// forces it on (otherwise an OTP device could renew forever).
+	if os.Getenv("JESS_DEVICE_RENEW_REVOCATION_CHECK") == "true" || witnessAllowOTP() {
 		falconURL := os.Getenv("JESS_FALCON_ID_INTERNAL_URL")
 		if falconURL == "" {
 			log.Fatal("jess-controller: JESS_DEVICE_RENEW_REVOCATION_CHECK=true requires JESS_FALCON_ID_INTERNAL_URL")
@@ -71,7 +74,9 @@ func buildDeviceRenewHandler(next http.Handler) (http.Handler, bool) {
 	}
 
 	log.Printf("jess-controller: device-cert RENEW handler ENABLED (ca=%s)", caPath)
-	return NewDeviceRenewHandler(next, verifier, vc, lookup), true
+	h := NewDeviceRenewHandler(next, verifier, vc, lookup)
+	h.otpMaxAge = otpWitnessMaxAge()
+	return h, true
 }
 
 // loadCertPool reads a PEM file and returns a pool containing its certs.
@@ -92,3 +97,25 @@ var errNoCertInPEM = &renewConfigError{"no PEM certificate found in device-CA fi
 type renewConfigError struct{ msg string }
 
 func (e *renewConfigError) Error() string { return e.msg }
+
+// witnessAllowOTP reports the JESS_WITNESS_ALLOW_OTP kill switch (default
+// false): the authenticator-app OTP witness fallback is rejected unless "true".
+func witnessAllowOTP() bool {
+	return os.Getenv("JESS_WITNESS_ALLOW_OTP") == "true"
+}
+
+// otpWitnessMaxAge reads JESS_OTP_WITNESS_MAX_AGE (Go duration, default 720h).
+// An unparsable or non-positive value falls back to the default (fail closed:
+// never disables the cap).
+func otpWitnessMaxAge() time.Duration {
+	raw := os.Getenv("JESS_OTP_WITNESS_MAX_AGE")
+	if raw == "" {
+		return defaultOTPWitnessMaxAge
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil || d <= 0 {
+		log.Printf("jess-controller: invalid JESS_OTP_WITNESS_MAX_AGE %q — using %s", raw, defaultOTPWitnessMaxAge)
+		return defaultOTPWitnessMaxAge
+	}
+	return d
+}

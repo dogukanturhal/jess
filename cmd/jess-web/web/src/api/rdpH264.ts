@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // rdpH264 — Tier-2 "native-feel" H.264 decode path (ADR 0053).
 //
 // A SELF-CONTAINED, capability-gated WebCodecs decoder for the MSG_H264 TLV

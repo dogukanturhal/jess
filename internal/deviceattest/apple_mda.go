@@ -92,7 +92,7 @@
 // =================
 // The Apple MDA attestation leaf cert does NOT carry a SPIFFE URI SAN. The
 // device identity is encoded in the custom OID extensions (serial/UDID).
-// The SPIFFE URI (spiffe://hexxlock.com/device/<uuid>) is stamped by jess
+// The SPIFFE URI (spiffe://example.com/device/<uuid>) is stamped by jess
 // into the device certificate that jess issues AFTER attestation succeeds —
 // it is not present in the Apple-issued attestation cert.
 //

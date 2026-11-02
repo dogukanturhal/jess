@@ -12,7 +12,7 @@ package main
 // Wire shape:
 //
 //   operator browser
-//     ↓  https://internal.example.com/proxy/<service>/<path>
+//     ↓  https://jess.internal.example.com/proxy/<service>/<path>
 //     ↓  (cookie session — operator already signed into jess-web)
 //     ↓
 //   jess-web /proxy handler

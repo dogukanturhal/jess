@@ -27,7 +27,7 @@ Phase 4 ("Device posture agent") has a receiver side that jess already implement
 
 - Jess admin port `:7103` continues to expose `/api/...` for `jessctl admin`.
 - Jess operator port `:7101` continues to expose RFC 8705 mTLS for operator-cert holders.
-- **NEW**: introduce edge path `jess-internal.example.com` fronted by Talon (admin tier). Talon evaluates the ZTNA Rego baseline (Talon ADR 0040 Phase 5) on every request:
+- **NEW**: introduce edge path `jess-ssh.internal.example.com` fronted by Talon (admin tier). Talon evaluates the ZTNA Rego baseline (Talon ADR 0040 Phase 5) on every request:
   - User identity → Falcon-ID OIDC token (existing)
   - Device cert → Phase 3 jess-device-ca mTLS at edge listener (gated on Phase 3 delivery)
   - Posture freshness → X-Talon-Posture JWT (existing ADR 0011)
@@ -46,13 +46,13 @@ Today's Vault SSH-CA role `ssh-admin` allows `*` user principals + `*` extension
 
 #### 2.3 Posture wall contract
 
-jess's `internal/risk` posture wall consumes a JWT today via `JESS_POSTURE_JWKS_URL`. Lock the claim shape so Phase 4's HexxLock Access agent produces wire-compatible JWTs:
+jess's `internal/risk` posture wall consumes a JWT today via `JESS_POSTURE_JWKS_URL`. Lock the claim shape so Phase 4's device agent agent produces wire-compatible JWTs:
 
 ```jsonc
 {
   // RFC 7519 standard
-  "iss": "https://posture.hexxlock.com",  // posture-signer service, distinct from id.hexxlock.com
-  "sub": "spiffe://hexxlock.com/device/<device-uuid>",  // Talon ADR 0040 D-005 SPIFFE-aligned naming
+  "iss": "https://posture.example.com",  // posture-signer service, distinct from id.example.com
+  "sub": "spiffe://example.com/device/<device-uuid>",  // Talon ADR 0040 D-005 SPIFFE-aligned naming
   "aud": ["talon", "jess"],
   "iat": 1717689600,
   "exp": 1717689900,  // 5 min cadence per Talon ADR 0040 D-003 (TIER_CORP)
@@ -86,15 +86,15 @@ When Talon revokes a session (via CAEP), jess's existing Phase 5h-6 CAEP subscri
 
 ### Phase 4 — Posture agent contract (receiver side)
 
-Jess receiver-side is already shipped (Phase 5h-3 device-posture wall). The agent side (new `hexxlock-access` repo) emits JWTs matching §2.3 to:
+Jess receiver-side is already shipped (Phase 5h-3 device-posture wall). The agent side (new `device-agent` repo) emits JWTs matching §2.3 to:
 
-- `https://id.hexxlock.com/posture/heartbeat` (every 5 min for TIER_CORP, 15 min for TIER_BYOD)
-- `https://posture.hexxlock.com/heartbeat` if the heartbeat path moves to a dedicated subdomain
+- `https://id.example.com/posture/heartbeat` (every 5 min for TIER_CORP, 15 min for TIER_BYOD)
+- `https://posture.example.com/heartbeat` if the heartbeat path moves to a dedicated subdomain
 
 Falcon-ID stores the latest posture JWT per device in a Redis cache with TTL = 2× cadence. On every request, Talon's posture verifier fetches the latest posture from Falcon-ID and projects it into `RegoInputPosture` (Talon `internal/policy.rego.go:93`).
 
 The posture-signer service is a NEW component:
-- Issuer: `https://posture.hexxlock.com` (Cloudflare-fronted, Linkerd-meshed in-cluster)
+- Issuer: `https://posture.example.com` (Cloudflare-fronted, Linkerd-meshed in-cluster)
 - Verifies the agent's WebAuthn-or-device-cert authentication
 - Re-signs the posture claims with `jess-posture-ca` so receivers verify against ONE JWKS
 - Runs as a `talon-adjacent` service (in `talon` namespace, sharing the Falcon-ID OIDC RP)
@@ -130,7 +130,7 @@ The posture-signer service is a NEW component:
 
 | Sub-phase | What | Effort |
 |-----------|------|--------|
-| 2.a | Talon route `jess-internal.example.com` + Rego ZTNA baseline + ext_authz claim forwarding | 1-2d |
+| 2.a | Talon route `jess-ssh.internal.example.com` + Rego ZTNA baseline + ext_authz claim forwarding | 1-2d |
 | 2.b | Jess SpiceDB principal derivation at mint-time + `allowed_users` Vault role update | 3-4d |
 | 2.c | `jess-posture-ca` Vault mount + Atlantis MR + Linkerd policy | 1d |
 | 2.d | posture-signer service scaffold (Go, in talon namespace) | 3-4d |

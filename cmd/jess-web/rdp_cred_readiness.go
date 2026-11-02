@@ -23,7 +23,7 @@
 //
 // Config (all on jess-web; the whole gate is OFF unless the URL is set):
 //
-//	JESS_RDP_CRED_READINESS_LDAP_URL    DC LDAP(S) URL, e.g. ldaps://dc.hexxlock.corp:636
+//	JESS_RDP_CRED_READINESS_LDAP_URL    DC LDAP(S) URL, e.g. ldaps://dc.corp.example.com:636
 //	                                    or ldap://10.0.20.10:389. Unset → gate disabled.
 //	JESS_RDP_CRED_READINESS_TIMEOUT     total wait budget (default 20s)
 //	JESS_RDP_CRED_READINESS_INSECURE_TLS=1  skip cert verify for ldaps (internal CA)

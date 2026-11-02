@@ -1,0 +1,28 @@
+version: "2"
+run:
+  timeout: 5m
+linters:
+  default: none
+  enable:
+    - govet
+    - ineffassign
+    - staticcheck
+  settings:
+    staticcheck:
+      # staticcheck's default set minus rules that flag pre-existing style and
+      # Go 1.26 deprecation debt (SA1019: httputil.ReverseProxy.Director,
+      # ecdsa.PublicKey.X/Y in tests; ST1005 error capitalisation; QF1006 and
+      # QF1008 quickfix suggestions). The `unused` linter is off for the same
+      # reason: five dead helpers remain (see CHANGELOG, Known issues).
+      checks:
+        - all
+        - -ST1000
+        - -ST1003
+        - -ST1005
+        - -ST1016
+        - -ST1020
+        - -ST1021
+        - -ST1022
+        - -SA1019
+        - -QF1006
+        - -QF1008

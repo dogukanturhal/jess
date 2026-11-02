@@ -5,7 +5,7 @@ package main
 // In-memory operator-session store. Maps a random session-id cookie value
 // to the operator's verified Falcon-ID OIDC token + email + expiry. Single
 // jess-web pod for now (per ADR 0030 Phase 5e); when we scale to ≥2 a
-// shared store (Redis or PG) replaces this — same Mearax pattern.
+// shared store (Redis or PG) replaces this — same pattern as the other web services.
 
 import (
 	"context"

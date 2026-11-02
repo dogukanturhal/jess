@@ -297,7 +297,7 @@ pre-existing workspace feature-resolution quirk, unrelated to the spike).
 
 The phased build above proves the *mechanism* (CredSSP → decode → recording).
 This section records the **production correctness rules** the live activation
-(infra-iac MR !203 + the GitOps repository MR !989) must follow. These are
+(infra-iac MR + the GitOps repository MR) must follow. These are
 non-negotiable for a real deployment even though the lab spike (P4's
 "LIVE … vs DC 10.0.20.10" note above) cut corners to prove the loop — that
 DC test was a **lab PoC only**; production never brokers RDP to a DC.
@@ -308,10 +308,10 @@ Apply Microsoft's administrative-tier model (Tier 0 = identity control plane:
 DCs, AD CS, ADFS; Tier 1 = member servers/apps; Tier 2 = workstations). A DC is
 **Tier 0**: interactive/RDP logon to it is the highest-value attack target and
 must not be exposed through a brokered convenience path. **Brokered RDP targets
-are Tier-1 member servers only** (e.g. `mail-server.hexxlock.corp`). The DC is
+are Tier-1 member servers only** (e.g. `mail-server.corp.example.com`). The DC is
 touched solely for *directory operations* — the Vault LDAPS bind that mints the
 ephemeral account — which is normal directory traffic, not an RDP session. The
-target catalog and NetworkPolicy enforce this: the former `dc01-rdp`
+target catalog and NetworkPolicy enforce this: the former `rdp-host-a`
 (10.0.20.10:3389) target is removed; RDP egress goes to the member server only.
 
 Corollary for the ephemeral account: it joins a **dedicated domain group**
@@ -326,7 +326,7 @@ NLA/CredSSP negotiates Kerberos when the target is reachable by a name that
 maps to a service principal name (`TERMSRV/<host>`); an **IP-address target
 forces a fallback to NTLM**, which is weaker (no mutual auth, relay/replay
 exposure, and on the deprecation path). Therefore RDP targets in the catalog
-MUST be the resolvable **FQDN** (`mail-server.hexxlock.corp:3389`), and the
+MUST be the resolvable **FQDN** (`mail-server.corp.example.com:3389`), and the
 member-server SPN + forward/reverse DNS must resolve **from the broker pod**.
 In `sspi`/`ironrdp-connector` terms: set the credential `domain` and dial the
 hostname so the SPNEGO chain selects Kerberos; treat an NTLM negotiation in a
@@ -367,7 +367,7 @@ The Vault→DC bind that mints the ephemeral account runs over **LDAPS with
 certificate validation ON** (`insecure_tls = false` + a pinned `certificate`).
 Pin the **issuing CA** where an enterprise CA exists; pin the **self-signed leaf**
 when the DC presents a self-signed machine cert (our current state — no AD CS;
-the DC's `CN=dc-identity.hexxlock.corp` machine cert carries the Server
+the DC's `CN=dc-identity.corp.example.com` machine cert carries the Server
 Authentication EKU and is the trust anchor). Never `insecure_tls = true` in
 production: an unvalidated LDAPS bind is MITM-exposed and would leak the bind
 account credential. (Operator prereq: LDAPS must be actively bound to that cert

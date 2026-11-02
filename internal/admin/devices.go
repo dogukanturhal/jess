@@ -17,7 +17,7 @@
 //
 // Operators query the list view from the admin UI (jess-web) +
 // targeted disable on a per-device basis. The status view at
-// `internal.example.com/admin/devices` is the SOC's primary
+// `jess.internal.example.com/admin/devices` is the SOC's primary
 // surface for "is the fleet posture-emitting and trustworthy?".
 package admin
 
@@ -66,6 +66,7 @@ type DeviceView struct {
 	TPMManufacturer string `json:"tpm_manufacturer,omitempty"`
 	TPMKind         string `json:"tpm_kind,omitempty"`
 	WitnessAdminSub string `json:"witness_admin_sub,omitempty"`
+	WitnessMethod   string `json:"witness_method,omitempty"`
 	EnrolledAt      string `json:"enrolled_at"`
 	LastSeenAt      string `json:"last_seen_at,omitempty"`
 	DisabledAt      string `json:"disabled_at,omitempty"`
@@ -82,6 +83,7 @@ func toDeviceView(d deviceattest.EnrolledDevice) DeviceView {
 		TPMManufacturer: d.TPMManufacturer,
 		TPMKind:         d.TPMKind,
 		WitnessAdminSub: d.WitnessAdminSub,
+		WitnessMethod:   d.WitnessMethod,
 	}
 	if !d.EnrolledAt.IsZero() {
 		v.EnrolledAt = d.EnrolledAt.UTC().Format(time.RFC3339)

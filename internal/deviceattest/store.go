@@ -60,7 +60,7 @@ type EnrollmentStore interface {
 	// — Register must reject when a disabled row exists, unless an
 	// operator explicitly clears it via a sibling admin path (not in this
 	// interface; the cluster operator path uses the audit-and-confirm
-	// flow at internal.example.com).
+	// flow at jess.internal.example.com).
 	Disable(ctx context.Context, deviceUUID string, reason string) error
 }
 
@@ -110,7 +110,7 @@ type EnrollmentFilter struct {
 // friendliness — flat struct, no nested types.
 type EnrolledDevice struct {
 	// DeviceUUID is the UUIDv4 bound to this device's EK public key.
-	// Used as the SPIFFE SAN: spiffe://hexxlock.com/device/<uuid>.
+	// Used as the SPIFFE SAN: spiffe://example.com/device/<uuid>.
 	DeviceUUID string
 
 	// UserSub is the Falcon-ID subject claim of the user who enrolled
@@ -165,6 +165,11 @@ type EnrolledDevice struct {
 	// enrollment witness (WebAuthn-signed JWS). Empty if no witness was
 	// required (returning-device path after initial enrollment).
 	WitnessAdminSub string
+
+	// WitnessMethod is how the witness was verified: WitnessMethodPasskey
+	// or WitnessMethodOTP. Empty for rows enrolled before the field existed
+	// (treated as passkey).
+	WitnessMethod string
 
 	// EnrolledAt is the wall-clock time of first enrollment, as recorded
 	// by the database. Zero value indicates a lookup miss (not found).

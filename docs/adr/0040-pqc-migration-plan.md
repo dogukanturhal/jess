@@ -141,7 +141,7 @@ ADR 0034 §Decisions #10 + §Pending-research item F notes that PQC posture of T
 
 **Files to touch:**
 - `internal/controller/server.go` — operator + admin ports reject classical-only via `VerifyConnection` hook that inspects `ConnectionState.CurveID` and returns `tls.AlertHandshakeFailure` if not in the hybrid set.
-- `infrastructure-iac/datacenters/eu-west-1/vault/vault-jess-ca.tf` — migrate `jess-ca` PKI mount to issue ML-DSA-65 certs (or hybrid via stapled signature extension if the IETF cert hybridisation draft has stabilised).
+- `iac-repo/datacenters/eu-west-1/vault/vault-jess-ca.tf` — migrate `jess-ca` PKI mount to issue ML-DSA-65 certs (or hybrid via stapled signature extension if the IETF cert hybridisation draft has stabilised).
 - `cmd/jessctl/admin/operator-cert.go` — adjust signer parsing.
 - `internal/recording/sign.go` — Vault Transit signing key migrates from Ed25519 to ML-DSA-65; helper supports both during the rotation window.
 

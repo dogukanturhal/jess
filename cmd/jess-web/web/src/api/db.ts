@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Browser SQL console API client. Backs the /db-console route. The single
 // endpoint POSTs a statement to jess-web's /api/db/query handler, which runs it
 // through the brokered Postgres/MySQL relay (server-side — the browser never

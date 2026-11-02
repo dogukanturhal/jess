@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // C2 design-system barrel.
 export { AppShell } from './AppShell'
 export { Masthead, openCommandPalette, OPEN_PALETTE_EVENT } from './Masthead'

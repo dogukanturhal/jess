@@ -67,7 +67,7 @@ import (
 
 // GroupVersionResource for the JessTarget CRD. Cluster-scoped.
 var GVR = schema.GroupVersionResource{
-	Group:    "jess.hexxlock.com",
+	Group:    "jess.example.com",
 	Version:  "v1alpha1",
 	Resource: "jesstargets",
 }

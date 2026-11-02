@@ -33,7 +33,7 @@ This ADR closes the **promotion half** of the gap.
 
 Introduce two layers:
 
-1. **`JessPendingTarget` CRD** (`jess.hexxlock.com/v1alpha1`).
+1. **`JessPendingTarget` CRD** (`jess.example.com/v1alpha1`).
    Cluster-scoped, mirrors `JessTarget.spec` with three additional
    provenance fields (`source`, `source_ref`, `discovered_at`) and a
    `status` block tracking promotion phase.
@@ -114,7 +114,7 @@ rewire.
 
 ## Implementation surface
 
-- `deploy/crd/jesspendingtargets.jess.hexxlock.com.yaml` — new CRD.
+- `deploy/crd/jesspendingtargets.jess.example.com.yaml` — new CRD.
 - `internal/lifecycle/pending/reconciler.go` — new package.
   - `New(ctx, Config) (*Reconciler, error)` — compiles Rego at
     construction; malformed policy fails fast.
@@ -178,5 +178,5 @@ rewire.
   controller to pick up policy edits. ConfigMap-mounted file +
   fsnotify watch is the natural follow-on.
 - **Bulk operator override** — `kubectl annotate jpt foo
-  jess.hexxlock.com/force-promote=true` to bypass Rego for one-off
+  jess.example.com/force-promote=true` to bypass Rego for one-off
   exceptions.

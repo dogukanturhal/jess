@@ -140,7 +140,7 @@ func buildCatalog(ctx context.Context, staticTargets []*catalog.Target, sink aud
 
 	// Phase B (auto-discovery program) — Kubernetes Service+annotation
 	// provider. Watches v1.Service objects annotated with
-	// jess.hexxlock.com/protocol=ssh|postgres|mysql|rdp|tcp. Cluster-wide
+	// jess.example.com/protocol=ssh|postgres|mysql|rdp|tcp. Cluster-wide
 	// by default; JESS_K8S_SERVICES_DISCOVERY_NAMESPACE narrows to one ns.
 	if k8sSvcOn {
 		client, err := k8ssvcprovider.NewInCluster()

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // useTargetSuggestions — pulls a deduped list of target ids the operator
 // has touched recently (from their own sessions + requests) so the
 // connect / request forms can offer native HTML <datalist> autocomplete.

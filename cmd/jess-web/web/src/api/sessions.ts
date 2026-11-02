@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Recent-sessions surface — backed by /api/my/sessions which proxies
 // to the controller's GET /sessions?mine=true (Phase 5e-6). The SPA
 // renders the response in the Landing page's "Recent sessions" card.

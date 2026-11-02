@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -81,7 +82,7 @@ func LoginOIDC(ctx context.Context, issuer, clientID, redirectAddr string, scope
 	defer srv.Close()
 
 	authURL := conf.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(verifier))
-	fmt.Printf("Open this URL to sign in:\n  %s\n", authURL)
+	fmt.Fprintf(os.Stderr, "Open this URL to sign in:\n  %s\n", authURL)
 	_ = openBrowser(authURL)
 
 	select {

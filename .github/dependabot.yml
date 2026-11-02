@@ -1,0 +1,47 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      opentelemetry:
+        patterns: ["go.opentelemetry.io/*"]
+      kubernetes:
+        patterns: ["k8s.io/*"]
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: cargo
+    directory: /services/ironrdp-broker
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /cmd/jess-web/web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Dockerfile base images (golang, node, rust, distroless, debian).
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Base image of the demo target SSH server.
+  - package-ecosystem: docker
+    directory: /demo/target-ssh
+    schedule:
+      interval: weekly
+
+  # Images pinned in the demo compose file (Vault, MinIO, Postgres, mock OIDC).
+  - package-ecosystem: docker-compose
+    directory: /demo
+    schedule:
+      interval: weekly

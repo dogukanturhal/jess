@@ -142,11 +142,22 @@ func (f *fakeEnrollmentStore) Disable(_ context.Context, deviceUUID, _ string) e
 }
 
 type fakeWitnessVerifier struct {
-	err error
+	err    error
+	method string // returned WitnessResult.Method; empty = passkey
+
+	gotEKHash, gotBearerSub string
 }
 
-func (f *fakeWitnessVerifier) Verify(_ context.Context, _ WitnessBundle, _ string) error {
-	return f.err
+func (f *fakeWitnessVerifier) Verify(_ context.Context, b WitnessBundle, _, ekHash, bearerSub string) (WitnessResult, error) {
+	f.gotEKHash, f.gotBearerSub = ekHash, bearerSub
+	if f.err != nil {
+		return WitnessResult{}, f.err
+	}
+	m := f.method
+	if m == "" {
+		m = WitnessMethodPasskey
+	}
+	return WitnessResult{Method: m, Sub: b.AdminSub}, nil
 }
 
 // -- helpers --------------------------------------------------------------
@@ -590,5 +601,43 @@ func TestTOFU_ForwardDatedWitness_Rejected(t *testing.T) {
 	}
 	if !contains(err.Error(), "future") {
 		t.Errorf("err message should mention 'future'; got: %v", err)
+	}
+}
+
+func TestTOFU_OTPWitnessPersistsMethodAndStaysBYOD(t *testing.T) {
+	store := newFakeStore()
+	witness := &fakeWitnessVerifier{method: WitnessMethodOTP}
+	now := time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)
+	v := NewTOFUVerifier("tpm2-linux", store, witness, WithTOFUClock(func() time.Time { return now }))
+	pemBytes := generateEKPubKeyPEM(t)
+	resp, err := v.Verify(context.Background(), VerifyRequest{
+		Platform: "tpm2-linux", Manufacturer: "AMD", Kind: "firmware",
+		EKPubKeyPEM: pemBytes, UserSub: "user@example.com",
+		DeviceUUID:  "550e8400-e29b-41d4-a716-446655440000",
+		NonceClient: testNonce32(t, "fresh"),
+		Witness:     validWitness(now.Add(-time.Minute)),
+	})
+	if err != nil {
+		t.Fatalf("verify: %v", err)
+	}
+	if resp.Tier != "TIER_BYOD" {
+		t.Errorf("tier=%q want TIER_BYOD", resp.Tier)
+	}
+	found := false
+	for _, r := range resp.Reasons {
+		found = found || r == "witness_amr_otp"
+	}
+	if !found {
+		t.Errorf("reasons %v lack witness_amr_otp", resp.Reasons)
+	}
+	if witness.gotEKHash != EKHashOf(pemBytes) {
+		t.Errorf("witness got ekHash %q want %q", witness.gotEKHash, EKHashOf(pemBytes))
+	}
+	if witness.gotBearerSub != "user@example.com" {
+		t.Errorf("witness got bearerSub %q", witness.gotBearerSub)
+	}
+	row, _ := store.GetByEKPubkeyHash(context.Background(), EKHashOf(pemBytes))
+	if row.WitnessMethod != WitnessMethodOTP {
+		t.Errorf("persisted WitnessMethod=%q want otp", row.WitnessMethod)
 	}
 }

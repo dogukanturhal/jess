@@ -10,7 +10,7 @@
 # concern.
 #
 # IMPORTANT: COPY paths are REPO-ROOT-RELATIVE because the shared
-# shared-ci-templates/templates/build-service.yml sets the BuildKit context
+# the CI build template sets the BuildKit context
 # to ${CI_PROJECT_DIR}, not to SERVICE_PATH. SERVICE_PATH only
 # controls where buildctl looks for THIS Dockerfile, not the build
 # context. Keeping COPYs prefixed with services/ironrdp-broker/ keeps
@@ -80,7 +80,20 @@ RUN touch crates/proxy-core/src/lib.rs crates/broker-bin/src/main.rs \
  && cargo build --release --bin jess-ironrdp-broker --locked
 
 # ---- runtime -----------------------------------------------------------------
+# ----- libssl3 security refresh ---------------------------------------------
+# distroless/cc-debian12 lags Debian security (libssl3 3.0.20 < 3.0.22,
+# CVE-2026-84782). Pull the fixed libssl3 from bookworm-security and overlay
+# its files + dpkg status entry (so scanners see the new version) in the
+# final stage. Drop this stage once the distroless base ships >= 3.0.22.
+FROM debian:bookworm-slim AS ssl-fix
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libssl3 \
+ && mkdir -p /out/var/lib/dpkg/status.d \
+ && dpkg-query -s libssl3 > /out/var/lib/dpkg/status.d/libssl3 \
+ && dpkg -L libssl3 | while read -r p; do [ -f "$p" ] && echo "${p#/}"; done | tar -C / -cf - -T - | tar -C /out -xf -
+
 FROM gcr.io/distroless/cc-debian12:nonroot
+COPY --from=ssl-fix /out/ /
 WORKDIR /app
 COPY --from=builder /work/target/release/jess-ironrdp-broker /app/jess-ironrdp-broker
 

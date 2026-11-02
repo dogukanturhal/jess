@@ -16,9 +16,9 @@
 //
 //	JESS_SPIRE_SVID       "1"/"true" to prefer SPIRE X.509-SVID mTLS  default off
 //	JESS_SPIRE_SOCKET     SPIRE Agent Workload API address   default unix:///spiffe-workload-api/spire-agent.sock
-//	JESS_SPIRE_TRUST_DOMAIN  SPIFFE trust domain             default prod.hexxlock
+//	JESS_SPIRE_TRUST_DOMAIN  SPIFFE trust domain             default prod.example
 //	JESS_SPIRE_WORKER_ID  worker SPIFFE ID the controller pins (AuthorizeID)
-//	                      default spiffe://prod.hexxlock/ns/jess/sa/jess/worker
+//	                      default spiffe://prod.example/ns/jess/sa/jess/worker
 //
 // The SVID path activates ONLY when SPIRE is deployed (a Workload API socket is
 // present) AND JESS_SPIRE_SVID is on. With the flag off, or when SPIRE isn't
@@ -176,7 +176,7 @@ func main() {
 
 	// Operator-token verification against Falcon-ID (OIDC). Identity (subject +
 	// roles) is derived ONLY from the verified token.
-	issuer := env("JESS_OIDC_ISSUER", "https://id.hexxlock.com")
+	issuer := env("JESS_OIDC_ISSUER", "https://id.example.com")
 	clientID := os.Getenv("JESS_OIDC_CLIENT_ID")
 	if clientID == "" {
 		log.Fatal("JESS_OIDC_CLIENT_ID is required (the Jess Falcon-ID OAuth client = token audience)")
@@ -835,8 +835,8 @@ func main() {
 			// (returns false) when the env gate is unset so the controller
 			// behavior is unchanged for all current deployments.
 			// The device-enrollment access token is minted for the
-			// hexxlock-access desktop app, which targets the platform API
-			// resource: Falcon-ID stamps aud=[client, https://api.hexxlock.com,
+			// device-agent desktop app, which targets the platform API
+			// resource: Falcon-ID stamps aud=[client, https://api.example.com,
 			// hexxlock-services] per its multi-audience model (audience.go).
 			// That is a DIFFERENT audience from the operator svc-jess token the
 			// admin chain above consumes, so the attest path validates with its
@@ -848,7 +848,7 @@ func main() {
 			// bound, ~5min-fresh witness; the cert is bound to the token sub).
 			attestVerifier := verifier
 			if os.Getenv("JESS_DEVICE_ATTEST_ENABLED") == "true" {
-				attestAud := env("JESS_DEVICE_ATTEST_AUDIENCE", "https://api.hexxlock.com")
+				attestAud := env("JESS_DEVICE_ATTEST_AUDIENCE", "https://api.example.com")
 				av, averr := pdp.NewFalconIDVerifier(context.Background(), issuer, attestAud)
 				if averr != nil {
 					log.Fatalf("jess-controller: device-attest token verifier (issuer=%s aud=%s): %v", issuer, attestAud, averr)

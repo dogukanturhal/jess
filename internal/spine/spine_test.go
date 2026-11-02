@@ -45,7 +45,7 @@ func (s *safeBuffer) String() string {
 }
 
 const (
-	testIssuer   = "https://id.hexxlock.test"
+	testIssuer   = "https://id.example.test"
 	testClientID = "svc-jess"
 )
 

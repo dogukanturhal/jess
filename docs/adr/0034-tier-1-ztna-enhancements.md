@@ -30,7 +30,7 @@ Carried in from the deep-research prompt; reproduced here so the ADR is self-con
 - **Phase 6** — `jessctl up` one-shot operator bring-up.
 - **Phase 7a-h** — Dynamic catalog (DiscoveryProvider + Aggregator), Proxmox / K8s / AWS / Azure providers, JessTarget CRD, admin-API target CRUD, host attestation framework, SPA Targets panel.
 - **Phase 4 (today 2026-06-02)** — Operator-cert revocation. Lite: POST /operator-cert/revoke + `jessctl admin operator-cert-revoke`. Full: `admin.CRLCache` 5min poll of `/v1/jess-ca/crl/pem` + `VerifyPeerCertificate` hook on operator port :7101 + admin port :7103 (`mTLS=true, CRL=true`). Verified live: TLS alert 42 (`bad_certificate`) on revoked cert after CRL refresh.
-- **Phase 3 (BeyondCorp L4)** — Public exposure on 203.0.113.10:7101 (jess.hexxlock.com) proven 2026-05-29.
+- **Phase 3 (BeyondCorp L4)** — Public exposure on 203.0.113.10:7101 (jess.example.com) proven 2026-05-29.
 - **mTLS device binding** — RFC 8705 §2.1 `tls_client_auth`, operator cert CN = verified Falcon-ID subject, Vault PKI mount `jess-ca` + role `operator-cert` (max_ttl=8h, 1y root), dual-CA trust bundle.
 - **Audit posture** — Per-session WORM with Ed25519 sig via Vault transit; cross-session hash chain; JSONL export endpoint; per-query audit for db-broker.
 
@@ -38,7 +38,7 @@ Carried in from the deep-research prompt; reproduced here so the ADR is self-con
 - Phase 5f-8b: full RDP fastpath + CredSSP + smart-card cert flow + RDP graphics recording (ADR 0033 scoped, multi-week, deferred).
 - Smart-card auth via AD CA cross-sign of Vault PKI `smartcard-login` role.
 - SPIRE-based worker mTLS (`JESS_SPIFFE_SOCKET` stub exists).
-- HA controller (replicas=2 + topology spread + PDB) — MR !798 in conflict.
+- HA controller (replicas=2 + topology spread + PDB) — MR in conflict.
 - Admin-direct-connect with AMR step-up gate — feature-flag gated.
 
 ## Verified findings (run 1 + run 2)
@@ -65,7 +65,7 @@ Y = jess has it; P = partial; N = no; ? = research-pending.
 | **CRL-enforced revocation at TLS handshake** | **Y (Phase 4 full — verified live 2026-06-02)** | Y (cert revocation + lock list) | ? | ? | Y | N (no client cert layer) | Y | N (token-only) | N (token-only) | N |
 | **Dynamic catalog discovery (cloud APIs)** | Y (Phase 7a-h — Proxmox / K8s / AWS / Azure) | Y (`discovery_service`) | Y (dynamic host catalogs from clouds) | Y | Y | N (manual endpoints) | N | Y (Access apps) | Y (route definitions) | N (manual DB) |
 | **Workload-to-workload mTLS via SPIRE** | N (file-mount; `JESS_SPIFFE_SOCKET` stub) | P (Teleport Machine ID) | ? | ? | ? | ? | ? | ? | ? | N |
-| **Public-internet exposure without VPN (BeyondCorp)** | Y (Phase 3, jess.hexxlock.com:7101) | Y | Y (HCP Plus) | Y | P (typically VPN-fronted) | Y (AWS-fronted) | Y | Y | Y | Y |
+| **Public-internet exposure without VPN (BeyondCorp)** | Y (Phase 3, jess.example.com:7101) | Y | Y (HCP Plus) | Y | P (typically VPN-fronted) | Y (AWS-fronted) | Y | Y | Y | Y |
 | **Tier-1 PAM compliance attestations (FedRAMP/SOC2/ISO27001)** | N (HexxLock infra is single-cluster prod; no external audit yet) | Y (FedRAMP-ready, SOC 2 Type II, ISO 27001) | Y (FedRAMP HCP) | Y (SOC 2) | Y (FedRAMP, SOC 2, ISO 27001) | Y (FedRAMP) | Y | Y (FedRAMP) | P | N |
 | **Cedar / policy-as-code engine** | P (OPA wired Phase 5h-4b; no Cedar) | P (Predicate language) | P (HCL-like policy) | P (Datasource policy) | P (PSM connector config) | Y (Cedar, Apache 2.0) | P (CEL) | P (Workers + Access policy) | Y (PPL — Pomerium Policy Language) | N |
 
@@ -121,7 +121,7 @@ Primary sources fetched: NIST FIPS 203 final, NIST IR 8547 (PQ migration draft),
 - Cloudflare Access (run 1, 3-0): browser-rendered SSH/VNC for clientless connections.
 - Pomerium (run 1, 2-0): continuous per-request verification at the proxy layer.
 
-**jess analog**: Talon as sole IAP for `internal.example.com` (`internal.example.com`). Talon credexchange swaps inbound JWT for upstream cred; verified per-request. **jess matches the IAP pattern** for ops-tier hosts. For customer-tier hosts (post-Phase 7.4.e migration to Envoy Gateway) the IAP layer is the EG `EnvoyExtensionPolicy` + WAF chain, NOT Talon.
+**jess analog**: Talon as sole IAP for `*.internal.example.com` (`auth.internal.example.com`). Talon credexchange swaps inbound JWT for upstream cred; verified per-request. **jess matches the IAP pattern** for ops-tier hosts. For customer-tier hosts (post-Phase 7.4.e migration to Envoy Gateway) the IAP layer is the EG `EnvoyExtensionPolicy` + WAF chain, NOT Talon.
 
 #### Hardware-key enforcement (verified — run 1)
 

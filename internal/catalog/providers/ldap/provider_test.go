@@ -48,10 +48,10 @@ func newP(t *testing.T, cfg Config) *Provider {
 
 func TestEntryToTargets_SSH_and_RDP_emitted(t *testing.T) {
 	p := newP(t, Config{})
-	entry := makeEntry("CN=dc01,OU=Domain Controllers,DC=internal,DC=example,DC=com",
+	entry := makeEntry("CN=ad-dc,OU=Domain Controllers,DC=internal,DC=hexxlock,DC=com",
 		map[string]string{
-			"cn":                     "dc01",
-			"dNSHostName":            "dc01.internal.example.com",
+			"cn":                     "ad-dc",
+			"dNSHostName":            "ad-dc.internal.example.com",
 			"operatingSystem":        "Windows Server 2022 Datacenter",
 			"operatingSystemVersion": "10.0 (20348)",
 			"description":            "AD DC + Forest Root",
@@ -66,7 +66,7 @@ func TestEntryToTargets_SSH_and_RDP_emitted(t *testing.T) {
 	}
 	ssh := bySuffix["ssh"]
 	rdp := bySuffix["rdp"]
-	if ssh.ID != "ldap-dc01-ssh" || ssh.Address != "dc01.internal.example.com:22" {
+	if ssh.ID != "ldap-ad-dc-ssh" || ssh.Address != "ad-dc.internal.example.com:22" {
 		t.Errorf("SSH: id=%q addr=%q", ssh.ID, ssh.Address)
 	}
 	if !ssh.HostKeyCASigned {
@@ -75,7 +75,7 @@ func TestEntryToTargets_SSH_and_RDP_emitted(t *testing.T) {
 	if ssh.Recorded != true {
 		t.Error("SSH should be recorded=true")
 	}
-	if rdp.ID != "ldap-dc01-rdp" || rdp.Address != "dc01.internal.example.com:3389" {
+	if rdp.ID != ssh.ID[:len(ssh.ID)-len("ssh")]+"rdp" || rdp.Address != "ad-dc.internal.example.com:3389" {
 		t.Errorf("RDP: id=%q addr=%q", rdp.ID, rdp.Address)
 	}
 	if rdp.Recorded {
@@ -95,7 +95,7 @@ func TestEntryToTargets_CriticalityByOU(t *testing.T) {
 		dn   string
 		want string
 	}{
-		{"CN=dc01,OU=Domain Controllers,DC=corp", "critical"},
+		{"CN=ad-dc,OU=Domain Controllers,DC=corp", "critical"},
 		{"CN=exch-1,OU=Exchange Servers,DC=corp", "high"},
 		{"CN=lab-1,OU=Lab,DC=corp", "medium"},
 		{"CN=app-1,OU=Production,DC=corp", "medium"}, // no rule = default
@@ -169,11 +169,11 @@ func TestEntryToTargets_Tier0RDPSuppressed(t *testing.T) {
 		DefaultCriticality: "medium",
 	})
 	// criticalityFor matches the `distinguishedName` ATTRIBUTE (not entry.DN).
-	dc := makeEntry("CN=dc01,OU=Domain Controllers,DC=internal,DC=example,DC=com",
+	dc := makeEntry("CN=ad-dc,OU=Domain Controllers,DC=internal,DC=hexxlock,DC=com",
 		map[string]string{
-			"cn":                "dc01",
-			"dNSHostName":       "dc01.internal.example.com",
-			"distinguishedName": "CN=dc01,OU=Domain Controllers,DC=internal,DC=example,DC=com",
+			"cn":                "ad-dc",
+			"dNSHostName":       "ad-dc.internal.example.com",
+			"distinguishedName": "CN=ad-dc,OU=Domain Controllers,DC=internal,DC=hexxlock,DC=com",
 		})
 	got := p.entryToTargets(dc)
 	if len(got) != 1 {
@@ -183,11 +183,11 @@ func TestEntryToTargets_Tier0RDPSuppressed(t *testing.T) {
 		t.Errorf("DC sole target must be SSH, got %q", got[0].Protocol)
 	}
 
-	member := makeEntry("CN=exch-1,OU=Exchange Servers,DC=internal,DC=example,DC=com",
+	member := makeEntry("CN=exch-1,OU=Exchange Servers,DC=internal,DC=hexxlock,DC=com",
 		map[string]string{
 			"cn":                "exch-1",
-			"dNSHostName":       "exch-1.internal.hexxlock.com",
-			"distinguishedName": "CN=exch-1,OU=Exchange Servers,DC=internal,DC=example,DC=com",
+			"dNSHostName":       "exch-1.internal.example.com",
+			"distinguishedName": "CN=exch-1,OU=Exchange Servers,DC=internal,DC=hexxlock,DC=com",
 		})
 	if got := p.entryToTargets(member); len(got) != 2 {
 		t.Fatalf("non-critical member should emit SSH+RDP, got %d: %#v", len(got), got)
@@ -205,11 +205,11 @@ func TestEntryToTargets_RDPSuppressionDisablable(t *testing.T) {
 			{OUSubstring: "Domain Controllers", Criticality: "critical"},
 		},
 	})
-	dc := makeEntry("CN=dc01,OU=Domain Controllers,DC=corp",
+	dc := makeEntry("CN=ad-dc,OU=Domain Controllers,DC=corp",
 		map[string]string{
-			"cn":                "dc01",
-			"dNSHostName":       "dc01.corp",
-			"distinguishedName": "CN=dc01,OU=Domain Controllers,DC=corp",
+			"cn":                "ad-dc",
+			"dNSHostName":       "ad-dc.corp",
+			"distinguishedName": "CN=ad-dc,OU=Domain Controllers,DC=corp",
 		})
 	if got := p.entryToTargets(dc); len(got) != 2 {
 		t.Fatalf("suppression disabled → DC emits SSH+RDP, got %d: %#v", len(got), got)
@@ -270,12 +270,12 @@ func TestNew_RequiresAtLeastOneProtocol(t *testing.T) {
 
 func TestSanitizeID(t *testing.T) {
 	cases := map[string]string{
-		"dc01":         "dc01",
-		"DC01":         "dc01",
-		"WIN-HOST-01!": "win-host-01",
-		"":             "unknown",
-		"---":          "unknown",
-		"server name":  "server-name",
+		"ad-dc":            "ad-dc",
+		"AD-DC":            "ad-dc",
+		"HOST-B_01!": "host-b-01",
+		"":                 "unknown",
+		"---":              "unknown",
+		"server name":      "server-name",
 	}
 	for in, want := range cases {
 		if got := sanitizeID(in); got != want {
