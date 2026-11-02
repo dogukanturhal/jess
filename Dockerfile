@@ -15,7 +15,7 @@
 # first, so it takes a while on a cold cache. The demo target skips both.
 
 # ----- Frontend: Vite SPA into /web/dist ------------------------------------
-FROM node:22-bookworm AS frontend
+FROM node:26-bookworm AS frontend
 WORKDIR /web
 COPY cmd/jess-web/web/package.json cmd/jess-web/web/pnpm-lock.yaml ./
 RUN corepack enable pnpm && pnpm install --frozen-lockfile
@@ -32,7 +32,7 @@ RUN pnpm build
 # Rust 1.89 is the floor for the IronRDP 0.15 / sspi 0.21 dependency tree and
 # must match services/ironrdp-broker/rust-toolchain.toml. The -bookworm tag
 # matches the glibc of the distroless/cc-debian12 runtime base.
-FROM rust:1.89-slim-bookworm AS rust-session-live
+FROM rust:1.99-slim-bookworm AS rust-session-live
 # g++ and nasm: OpenH264 (software H.264) is C++ with optional SIMD assembly.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates pkg-config g++ nasm \
@@ -57,7 +57,7 @@ RUN touch crates/proxy-core/src/lib.rs crates/proxy-core/src/bin/session_live.rs
       --features jess-ironrdp-proxy-core/ironrdp_live --bin session_live
 
 # ----- Go: shared module cache ----------------------------------------------
-FROM golang:1.26-bookworm AS gobase
+FROM golang:1.27-bookworm AS gobase
 WORKDIR /src
 ENV GOFLAGS=-mod=mod \
     CGO_ENABLED=0
