@@ -37,13 +37,13 @@ repository = "https://github.com/dogukanturhal/jess"
 
 [workspace.dependencies]
 # HTTP / WebSocket
-axum = { version = "0.7", features = ["ws", "macros"] }
+axum = { version = "0.8", features = ["ws", "macros"] }
 tokio = { version = "1.42", features = ["full"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["trace", "timeout"] }
+tower-http = { version = "0.7", features = ["trace", "timeout"] }
 
 # Auth
-jsonwebtoken = { version = "10", default-features = false, features = ["aws_lc_rs"] }
+jsonwebtoken = { version = "11", default-features = false, features = ["aws_lc_rs"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 
 # Serialisation
@@ -102,10 +102,10 @@ time = { version = "0.3", features = ["serde", "serde-well-known", "macros"] }
 # rust-ironrdp-bridge.md) will exercise the actual Connector + Pdu
 # APIs and will be coded against whatever surface ships in these
 # versions at that point.
-ironrdp = { version = "=0.15.0", default-features = false }
-ironrdp-pdu = { version = "=0.8.0", default-features = false }
+ironrdp = { version = "=0.16.0", default-features = false }
+ironrdp-pdu = { version = "=0.11.0", default-features = false }
 ironrdp-connector = { version = "=0.9.0", default-features = false }
-ironrdp-svc = { version = "=0.7.0", default-features = false }
+ironrdp-svc = { version = "=0.10.0", default-features = false }
 
 # Live-CredSSP handshake helpers (ADR 0051 — feat/rdp-credssp-live, the
 # gating-risk spike). OPTIONAL everywhere; only pulled in under
@@ -140,10 +140,10 @@ ironrdp-svc = { version = "=0.7.0", default-features = false }
 # — `[workspace.dependencies]` entries cannot be optional.
 ironrdp-async = { version = "=0.9.0", default-features = false }
 ironrdp-tokio = { version = "=0.9.0", default-features = false }
-ironrdp-session = { version = "=0.9.0", default-features = false }
+ironrdp-session = { version = "=0.10.0", default-features = false }
 sspi = { version = "=0.21.0", default-features = false, features = ["network_client", "aws-lc-rs"] }
-tokio-rustls = { version = "=0.26.4" }
-x509-cert = { version = "=0.2.5", default-features = false, features = ["std"] }
+tokio-rustls = { version = "=0.26.6" }
+x509-cert = { version = "=0.3.0", default-features = false, features = ["std"] }
 zeroize = { version = "1" }
 # PNG encoder for the P2a "first pixels" decode (ADR 0051,
 # feat/rdp-p2-decode). Writes `DecodedImage`'s tightly-packed RGBA8
@@ -152,7 +152,7 @@ zeroize = { version = "1" }
 # fdeflate / flate2 / miniz_oxide — are ALL already in the locked tree or
 # offline cache. OPTIONAL everywhere; only pulled under proxy-core's
 # `ironrdp_live` feature so default builds/CI are byte-for-byte unchanged.
-png = { version = "=0.17.16", default-features = false }
+png = { version = "=0.18.1", default-features = false }
 # LOSSY WebP encoder for the Tier-1 live dirty-rect stream (ADR 0051,
 # feat/rdp-tier1-webp-offthread). `default-features = false` drops the crate's
 # `img` feature (which would pull the WHOLE `image` codec tree); we only use the
@@ -173,7 +173,7 @@ webp = { version = "=0.3.1", default-features = false }
 # encode speedup). OPTIONAL; pulled only under proxy-core's `ironrdp_live`
 # feature so default builds/CI are byte-for-byte unchanged. H.264 patent note in
 # ADR 0061 (same exposure as the existing EGFX/WebCodecs H.264 paths).
-openh264 = { version = "=0.6.6", default-features = false, features = ["source"] }
+openh264 = { version = "=0.9.9", default-features = false, features = ["source"] }
 
 # --- Vendored patch: ironrdp-connector + MS-RDPEGFX GFX-protocol advertise ---
 # Upstream ironrdp-connector 0.9.0 hardcodes the GCC client early-capability

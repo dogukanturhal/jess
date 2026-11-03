@@ -39,7 +39,7 @@ ironrdp-svc = { workspace = true }
 # feature so the default build's surface is unchanged (ADR 0033 — the
 # default broker still does NOT `use` any ironrdp connector type). The
 # pin tracks ironrdp-connector 0.9's `ironrdp-core = "0.2"` requirement.
-ironrdp-core = { version = "=0.2.0", optional = true }
+ironrdp-core = { version = "=0.3.1", optional = true }
 
 # Live-CredSSP handshake deps (feature `ironrdp_live`). All optional —
 # absent from the default build's surface. See connect.rs for usage.
@@ -80,7 +80,7 @@ openh264 = { workspace = true, optional = true }
 # in the P2b stream loop's `read_pdu_timeout` helper signature. Already in
 # the locked graph as an ironrdp/tokio transitive (=1.11.1); declared here
 # ONLY under `ironrdp_live` so the default build's surface is unchanged.
-bytes = { version = "=1.11.1", optional = true }
+bytes = { version = "=1.12.1", optional = true }
 # CLIPBOARD virtual channel (MS-RDPECLIP / cliprdr) — Tier-3 virtual-channel
 # work (ADR 0054). The CLIPRDR static-virtual-channel SVC processor +
 # `CliprdrBackend` trait + clipboard PDU codec (CF_UNICODETEXT helpers). The
@@ -92,7 +92,7 @@ bytes = { version = "=1.11.1", optional = true }
 # 0.6.0 (the version the 0.15 meta-crate caret-requires) — same exact-pin
 # discipline as the rest of this stack. OPTIONAL — absent from the default
 # build's surface; only compiled under `ironrdp_live`.
-ironrdp-cliprdr = { version = "=0.6.0", optional = true }
+ironrdp-cliprdr = { version = "=0.9.0", optional = true }
 
 # MS-RDPEGFX (graphics pipeline) DVC support — Tier-2 H.264/AVC420 in-tree
 # handler (ADR 0053, `src/egfx.rs`). The `ironrdp` meta-crate exposes the DVC
@@ -102,7 +102,7 @@ ironrdp-cliprdr = { version = "=0.6.0", optional = true }
 # (already enabled). `dep:ironrdp-dvc` pins the exact 0.6.0 the 0.15 meta-crate
 # caret-requires (same exact-pin discipline as cliprdr). OPTIONAL — only built
 # under `ironrdp_live`.
-ironrdp-dvc = { version = "=0.6.0", optional = true }
+ironrdp-dvc = { version = "=0.7.0", optional = true }
 
 [features]
 # First IronRDP spike (ADR 0051). OFF by default — keeps the default
